@@ -200,6 +200,16 @@ mod tests {
     }
 
     #[test]
+    fn set_device_replaces_a_device_that_is_still_present() {
+        let stale = MockDevice { resets: 99, ..MockDevice::default() };
+        let mut engine = Engine::new(Some(stale), "boing");
+        engine.set_device(Some(MockDevice::default()));
+        let device = engine.device().unwrap();
+        assert_eq!(device.resets, 0, "the old device is still attached");
+        assert_eq!(device.frames.len(), 1, "the new device shows the scene");
+    }
+
+    #[test]
     fn failed_send_drops_device_until_replaced() {
         let mut engine = Engine::new(Some(FailingDevice), "boing");
         assert!(engine.device().is_none());
