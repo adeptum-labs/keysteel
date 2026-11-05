@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.keysteel.Daemon
+Exec=@HOME@/.cargo/bin/keysteel-daemon
+SystemdService=keysteel-daemon.service
