@@ -30,13 +30,15 @@ impl Service {
                 .set_scene(id)
                 .map_err(|e| fdo::Error::InvalidArgs(e.to_string()))?;
             inner.started = Instant::now();
-        }
-        self.shared.wake();
-        if let Some(path) = state::default_path() {
-            if let Err(e) = state::save_to(&path, id) {
-                eprintln!("cannot save scene: {e}");
+            // Saved while the lock is held, so the file always matches the
+            // scene that was applied last.
+            if let Some(path) = state::default_path() {
+                if let Err(e) = state::save_to(&path, id) {
+                    eprintln!("cannot save scene: {e}");
+                }
             }
         }
+        self.shared.wake();
         Ok(())
     }
 
