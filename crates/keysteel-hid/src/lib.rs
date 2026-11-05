@@ -2,7 +2,7 @@ mod hidraw;
 mod mock;
 mod report;
 
-pub use hidraw::HidrawDevice;
+pub use hidraw::{is_keyboard_hid_id, HidrawDevice};
 pub use mock::MockDevice;
 pub use report::{encode_report, encode_reset_report, REPORT_LEN};
 
