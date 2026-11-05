@@ -8,14 +8,15 @@ use keysteel_hid::HidrawDevice;
 use runtime::Shared;
 use std::sync::Arc;
 use zbus::blocking::connection;
+use zbus::fdo::{RequestNameFlags, RequestNameReply};
 
 fn main() {
     let scene = state::default_path().map(|p| state::load_from(&p)).unwrap_or_else(|| "off".into());
-    let device = HidrawDevice::open().ok();
-    let shared = Arc::new(Shared::new(Engine::new(device, &scene)));
+    // The keyboard is attached only after the bus name is ours, so a second
+    // copy started by hand fails before it can touch the display.
+    let shared = Arc::new(Shared::new(Engine::<HidrawDevice>::new(None, &scene)));
 
-    let _connection = match connection::Builder::session()
-        .and_then(|b| b.name(dbus::BUS_NAME))
+    let connection = match connection::Builder::session()
         .and_then(|b| b.serve_at(dbus::OBJECT_PATH, dbus::Service { shared: shared.clone() }))
         .and_then(|b| b.build())
     {
@@ -25,6 +26,19 @@ fn main() {
             std::process::exit(1);
         }
     };
+    // Without DoNotQueue a second copy would wait for the name and run
+    // beside the first one, both drawing on the keyboard.
+    match connection.request_name_with_flags(dbus::BUS_NAME, RequestNameFlags::DoNotQueue.into()) {
+        Ok(RequestNameReply::PrimaryOwner | RequestNameReply::AlreadyOwner) => {}
+        Ok(_) | Err(zbus::Error::NameTaken) => {
+            eprintln!("{} is already running", dbus::BUS_NAME);
+            std::process::exit(1);
+        }
+        Err(e) => {
+            eprintln!("cannot take the D-Bus name: {e}");
+            std::process::exit(1);
+        }
+    }
 
     let watcher = shared.clone();
     std::thread::spawn(move || {
