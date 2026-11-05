@@ -1,0 +1,11 @@
+[Unit]
+Description=Keysteel keyboard daemon
+
+[Service]
+Type=dbus
+BusName=org.keysteel.Daemon
+ExecStart=%h/.cargo/bin/keysteel-daemon
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
