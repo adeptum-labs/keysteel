@@ -9,11 +9,10 @@ use std::time::Duration;
 const OPEN_ATTEMPTS: u32 = 10;
 const OPEN_RETRY: Duration = Duration::from_millis(200);
 
-/// Attaches the keyboard to the engine if none is attached yet.
+/// Opens the keyboard and gives it to the engine, replacing any handle it
+/// already holds. A handle can go stale without a failed send (unplugged
+/// while no frames were being sent), so a node appearing always wins.
 pub fn try_attach(shared: &Shared) {
-    if shared.lock().engine.device().is_some() {
-        return;
-    }
     for _ in 0..OPEN_ATTEMPTS {
         if let Ok(device) = HidrawDevice::open() {
             shared.lock().engine.set_device(Some(device));
