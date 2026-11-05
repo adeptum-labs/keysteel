@@ -1,6 +1,8 @@
+mod hidraw;
 mod mock;
 mod report;
 
+pub use hidraw::HidrawDevice;
 pub use mock::MockDevice;
 pub use report::{encode_report, REPORT_LEN};
 
