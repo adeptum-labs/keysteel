@@ -1,0 +1,48 @@
+# Keysteel
+
+An unofficial Linux companion for SteelSeries keyboards, in the spirit of
+SteelSeries GG. Keysteel runs quietly in the background from the moment you
+log in to your desktop and lets you configure your keyboard without Windows.
+
+The first target device is the **Apex Pro TKL** with its OLED display.
+
+> Keysteel is an independent project. It is not affiliated with, endorsed by
+> or supported by SteelSeries. SteelSeries and Apex are trademarks of their
+> respective owners.
+
+## Status
+
+Early days. Nothing is implemented yet. The list below is what Keysteel is
+meant to do, not what it does today.
+
+## Planned features
+
+- Per-key RGB lighting and lighting effects
+- Key remapping
+- Macros
+- Profiles that can be switched on the fly
+- OLED display content (text, images, status information)
+
+## Planned design
+
+- Written in Rust.
+- **Background service** that talks to the keyboard over USB HID and applies
+  the active profile. It starts at login through a systemd user service or an
+  XDG autostart entry and is built to idle on a few megabytes of memory.
+- **Desktop app** with a tray icon, opened on demand, that configures the
+  service.
+- A udev rule so the keyboard can be used without root privileges.
+- Primary desktop target: Linux Mint (Cinnamon).
+
+## Building
+
+Not available yet.
+
+## License
+
+Copyright © 2026 Adeptum AB and Adam Waldenberg.
+
+Keysteel is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version. See the [LICENSE](LICENSE) file for the full text.
