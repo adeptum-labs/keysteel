@@ -24,9 +24,20 @@ impl std::error::Error for ClientError {}
 
 fn map_error(error: zbus::Error) -> ClientError {
     match fdo::Error::from(error) {
-        fdo::Error::ServiceUnknown(_) | fdo::Error::NameHasNoOwner(_) => {
-            ClientError::DaemonNotRunning
-        }
+        fdo::Error::ServiceUnknown(_)
+        | fdo::Error::NameHasNoOwner(_)
+        | fdo::Error::SpawnExecFailed(_)
+        | fdo::Error::SpawnForkFailed(_)
+        | fdo::Error::SpawnChildExited(_)
+        | fdo::Error::SpawnChildSignaled(_)
+        | fdo::Error::SpawnFailed(_)
+        | fdo::Error::SpawnFailedToSetup(_)
+        | fdo::Error::SpawnConfigInvalid(_)
+        | fdo::Error::SpawnServiceNotValid(_)
+        | fdo::Error::SpawnServiceNotFound(_)
+        | fdo::Error::SpawnPermissionsInvalid(_)
+        | fdo::Error::SpawnFileInvalid(_)
+        | fdo::Error::SpawnNoMemory(_) => ClientError::DaemonNotRunning,
         other => ClientError::Call(other.to_string()),
     }
 }
@@ -79,6 +90,23 @@ mod tests {
     fn name_without_owner_maps_to_daemon_not_running() {
         let error = map_error(fdo_error(fdo::Error::NameHasNoOwner("gone".into())));
         assert!(matches!(error, ClientError::DaemonNotRunning));
+    }
+
+    #[test]
+    fn activation_failures_map_to_daemon_not_running() {
+        let errors = vec![
+            fdo::Error::SpawnExecFailed("x".into()),
+            fdo::Error::SpawnChildExited("x".into()),
+            fdo::Error::SpawnChildSignaled("x".into()),
+            fdo::Error::SpawnFailed("x".into()),
+            fdo::Error::SpawnServiceNotFound("x".into()),
+            fdo::Error::SpawnServiceNotValid("x".into()),
+        ];
+        for error in errors {
+            let text = error.to_string();
+            let mapped = map_error(fdo_error(error));
+            assert!(matches!(mapped, ClientError::DaemonNotRunning), "{text}");
+        }
     }
 
     #[test]
