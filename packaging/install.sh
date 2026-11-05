@@ -9,13 +9,6 @@ cargo_root=${CARGO_INSTALL_ROOT:-${CARGO_HOME:-$HOME/.cargo}}
 bin=$cargo_root/bin
 
 cargo install --path "$root/crates/keysteel-daemon" --locked --root "$cargo_root"
-if [ -d "$root/crates/keysteel-app" ]; then
-    cargo install --path "$root/crates/keysteel-app" --locked --root "$cargo_root"
-    mkdir -p "$data/applications"
-    sed "s|@BIN@|$bin|" "$root/packaging/keysteel.desktop" \
-        > "$data/applications/keysteel.desktop"
-fi
-
 mkdir -p "$config/systemd/user"
 sed "s|@BIN@|$bin|" "$root/packaging/systemd/keysteel-daemon.service" \
     > "$config/systemd/user/keysteel-daemon.service"
@@ -25,6 +18,17 @@ sed "s|@BIN@|$bin|" "$root/packaging/dbus/org.keysteel.Daemon.service" \
 
 systemctl --user daemon-reload
 systemctl --user enable --now keysteel-daemon.service
+
+# The app needs the GTK 4 development files. Without them the daemon still works.
+if pkg-config --exists gtk4 2>/dev/null; then
+    cargo install --path "$root/crates/keysteel-app" --locked --root "$cargo_root"
+    mkdir -p "$data/applications"
+    sed "s|@BIN@|$bin|" "$root/packaging/keysteel.desktop" \
+        > "$data/applications/keysteel.desktop"
+else
+    echo "Skipping the app: the GTK 4 development files were not found." >&2
+    echo "Install them (libgtk-4-dev on Debian and Mint) and run this script again." >&2
+fi
 
 cat <<EOF
 
