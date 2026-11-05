@@ -1,9 +1,11 @@
 use keysteel_core::frame::{Frame, HEIGHT, WIDTH};
 
-/// Feature report: report id, four header bytes, then 128 * 5 page bytes.
-pub const REPORT_LEN: usize = 5 + WIDTH * HEIGHT / 8;
+/// The feature report is 645 bytes: report id, the live-write header, the
+/// 640 picture bytes and zero padding.
+pub const REPORT_LEN: usize = 645;
 
-const HEADER: [u8; 5] = [0x00, 0x38, 0x83, 0x00, 0x00];
+/// Report id, device command 0x1f and the live (direct) write sub-command.
+const HEADER: [u8; 3] = [0x00, 0x1f, 0x81];
 
 /// Packs a frame the way the Apex Pro TKL Gen 3 OLED expects it: pages of
 /// eight rows, one byte per column, top row of a page in the lowest bit.
@@ -35,12 +37,12 @@ mod tests {
     use keysteel_core::frame::Frame;
 
     #[test]
-    fn report_has_id_header_and_640_page_bytes() {
+    fn report_has_live_write_header_and_640_page_bytes() {
         let report = encode_report(&Frame::new());
         assert_eq!(report.len(), 645);
         assert_eq!(report.len(), REPORT_LEN);
-        assert_eq!(&report[..5], &[0x00, 0x38, 0x83, 0x00, 0x00]);
-        assert!(report[5..].iter().all(|b| *b == 0));
+        assert_eq!(&report[..3], &[0x00, 0x1f, 0x81]);
+        assert!(report[3..].iter().all(|b| *b == 0));
     }
 
     #[test]
@@ -55,21 +57,21 @@ mod tests {
     fn top_left_pixel_is_lsb_of_first_page_byte() {
         let mut frame = Frame::new();
         frame.set_pixel(0, 0, true);
-        assert_eq!(encode_report(&frame)[5], 0x01);
+        assert_eq!(encode_report(&frame)[3], 0x01);
     }
 
     #[test]
     fn pixel_row_7_is_msb_of_first_page_byte() {
         let mut frame = Frame::new();
         frame.set_pixel(0, 7, true);
-        assert_eq!(encode_report(&frame)[5], 0x80);
+        assert_eq!(encode_report(&frame)[3], 0x80);
     }
 
     #[test]
     fn pixel_row_8_starts_second_page() {
         let mut frame = Frame::new();
         frame.set_pixel(0, 8, true);
-        assert_eq!(encode_report(&frame)[5 + 128], 0x01);
+        assert_eq!(encode_report(&frame)[3 + 128], 0x01);
     }
 
     #[test]
@@ -77,6 +79,6 @@ mod tests {
         let mut frame = Frame::new();
         frame.set_pixel(127, 39, true);
         // page 4, byte 127, row 39 % 8 = 7
-        assert_eq!(encode_report(&frame)[5 + 4 * 128 + 127], 0x80);
+        assert_eq!(encode_report(&frame)[3 + 4 * 128 + 127], 0x80);
     }
 }
