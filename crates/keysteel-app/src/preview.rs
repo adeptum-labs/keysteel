@@ -1,9 +1,11 @@
-use keysteel_core::frame::{Frame, HEIGHT, WIDTH};
+use keysteel_core::frame::{Frame, HEIGHT, RESERVED_TOP, WIDTH};
 
 /// Colour of a lit OLED pixel, as RGBA.
 pub const ON: [u8; 4] = [0xe8, 0xe8, 0xe8, 0xff];
 /// Colour of a dark OLED pixel, as RGBA.
 pub const OFF: [u8; 4] = [0x10, 0x14, 0x1a, 0xff];
+/// Colour of the rows where the keyboard shows its own status text.
+pub const BAND: [u8; 4] = [0x2e, 0x34, 0x3e, 0xff];
 
 /// Width and height in pixels of a frame drawn at `scale` times its size.
 pub fn preview_size(scale: usize) -> (usize, usize) {
@@ -16,8 +18,15 @@ pub fn scale_frame_to_rgba(frame: &Frame, scale: usize) -> Vec<u8> {
     let mut rgba = Vec::with_capacity(width * height * 4);
     for y in 0..height {
         for x in 0..width {
-            let on = frame.get_pixel(x / scale, y / scale);
-            rgba.extend_from_slice(if on { &ON } else { &OFF });
+            let (px, py) = (x / scale, y / scale);
+            let colour = if py < RESERVED_TOP {
+                &BAND
+            } else if frame.get_pixel(px, py) {
+                &ON
+            } else {
+                &OFF
+            };
+            rgba.extend_from_slice(colour);
         }
     }
     rgba
@@ -46,13 +55,24 @@ mod tests {
     #[test]
     fn set_pixel_fills_its_whole_scaled_block() {
         let mut frame = Frame::new();
-        frame.set_pixel(0, 0, true);
+        frame.set_pixel(0, 12, true);
         let rgba = scale_frame_to_rgba(&frame, 2);
-        for (x, y) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+        for (x, y) in [(0, 24), (1, 24), (0, 25), (1, 25)] {
             assert_eq!(pixel(&rgba, 256, x, y), ON, "({x},{y})");
         }
-        assert_eq!(pixel(&rgba, 256, 2, 0), OFF);
-        assert_eq!(pixel(&rgba, 256, 0, 2), OFF);
+        assert_eq!(pixel(&rgba, 256, 2, 24), OFF);
+        assert_eq!(pixel(&rgba, 256, 0, 26), OFF);
+    }
+
+    #[test]
+    fn reserved_rows_are_painted_as_the_status_band() {
+        let mut frame = Frame::new();
+        frame.set_pixel(5, 0, true);
+        let rgba = scale_frame_to_rgba(&frame, 2);
+        let band_end = RESERVED_TOP * 2;
+        assert_eq!(pixel(&rgba, 256, 10, 0), BAND);
+        assert_eq!(pixel(&rgba, 256, 0, band_end - 1), BAND);
+        assert_eq!(pixel(&rgba, 256, 0, band_end), OFF);
     }
 
     #[test]
