@@ -9,4 +9,4 @@ keysteel-core = { path = "../keysteel-core" }
 keysteel-hid = { path = "../keysteel-hid" }
 libc = "0.2.191"
 udev = "0.9.3"
-zbus = "6.2.1"
+zbus = "5"
