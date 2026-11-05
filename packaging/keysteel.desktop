@@ -2,7 +2,7 @@
 Type=Application
 Name=Keysteel
 Comment=Configure your SteelSeries keyboard
-Exec=@HOME@/.cargo/bin/keysteel-app
+Exec=@BIN@/keysteel-app
 Icon=input-keyboard
 Terminal=false
 Categories=Settings;HardwareSettings;
