@@ -1,0 +1,9 @@
+[package]
+name = "keysteel-daemon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+keysteel-core = { path = "../keysteel-core" }
+keysteel-hid = { path = "../keysteel-hid" }

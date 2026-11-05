@@ -42,6 +42,14 @@ name = "keysteel-core"
 version = "0.1.0"
 
 [[package]]
+name = "keysteel-daemon"
+version = "0.1.0"
+dependencies = [
+ "keysteel-core",
+ "keysteel-hid",
+]
+
+[[package]]
 name = "keysteel-hid"
 version = "0.1.0"
 dependencies = [

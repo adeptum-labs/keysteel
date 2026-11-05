@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/keysteel-core", "crates/keysteel-hid"]
+members = ["crates/keysteel-core", "crates/keysteel-hid", "crates/keysteel-daemon"]
 
 [workspace.package]
 version = "0.1.0"
