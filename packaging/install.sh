@@ -9,7 +9,9 @@ config=${XDG_CONFIG_HOME:-$HOME/.config}
 cargo install --path "$root/crates/keysteel-daemon" --locked
 if [ -d "$root/crates/keysteel-app" ]; then
     cargo install --path "$root/crates/keysteel-app" --locked
-    install -Dm644 "$root/packaging/keysteel.desktop" "$data/applications/keysteel.desktop"
+    mkdir -p "$data/applications"
+    sed "s|@HOME@|$HOME|" "$root/packaging/keysteel.desktop" \
+        > "$data/applications/keysteel.desktop"
 fi
 
 install -Dm644 "$root/packaging/systemd/keysteel-daemon.service" \
