@@ -44,7 +44,10 @@ fn main() {
     std::thread::spawn(move || {
         hotplug::try_attach(&watcher);
         if let Err(e) = hotplug::watch(watcher) {
+            // Without the watcher a replugged keyboard is never found again,
+            // so stop and let the service manager start a fresh daemon.
             eprintln!("hotplug watcher stopped: {e}");
+            std::process::exit(1);
         }
     });
 
