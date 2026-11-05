@@ -61,7 +61,8 @@ mod tests {
         frame.set_pixel(127, 39, true);
         let rgba = scale_frame_to_rgba(&frame, 3);
         assert_eq!(pixel(&rgba, 384, 383, 119), ON);
-        assert_eq!(pixel(&rgba, 384, 380, 116), ON);
-        assert_eq!(pixel(&rgba, 384, 379, 119), OFF);
+        assert_eq!(pixel(&rgba, 384, 381, 117), ON);
+        assert_eq!(pixel(&rgba, 384, 380, 117), OFF);
+        assert_eq!(pixel(&rgba, 384, 381, 116), OFF);
     }
 }
