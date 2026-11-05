@@ -164,6 +164,18 @@ mod tests {
     }
 
     #[test]
+    fn mario_leaves_the_reserved_band_free() {
+        for ms in (0..2000).step_by(30) {
+            let frame = render_at(ms);
+            for y in 0..crate::frame::RESERVED_TOP {
+                for x in 0..128 {
+                    assert!(!frame.get_pixel(x, y), "lit ({x},{y}) at {ms} ms");
+                }
+            }
+        }
+    }
+
+    #[test]
     fn mario_stays_in_view_at_any_time() {
         for ms in (0..10_000).step_by(97) {
             assert!(render_at(ms).as_bytes().iter().any(|b| *b != 0), "blank at {ms} ms");
