@@ -1,9 +1,6 @@
 pub const WIDTH: usize = 128;
 pub const HEIGHT: usize = 40;
 pub const BYTES: usize = WIDTH * HEIGHT / 8;
-/// The keyboard draws its own status text over the top rows; scenes keep
-/// to the rows below.
-pub const RESERVED_TOP: usize = 12;
 
 /// A 128x40 one-bit-per-pixel image, row-major, most significant bit first.
 #[derive(Clone, PartialEq, Eq, Debug)]
