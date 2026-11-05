@@ -102,7 +102,9 @@ impl Scene for Mario {
 
     fn render(&mut self, elapsed: Duration, frame: &mut Frame) {
         frame.clear();
-        let scroll = (elapsed.as_secs_f32() * SCROLL_PIXELS_PER_SEC) as i32;
+        // The ground pattern repeats every 8 pixels, so only the remainder
+        // matters; f64 keeps it exact after days of uptime.
+        let scroll = ((elapsed.as_secs_f64() * SCROLL_PIXELS_PER_SEC as f64) as u64 % 8) as i32;
         Mario::draw_ground(frame, scroll);
 
         let index = (elapsed.as_millis() / FRAME_MILLIS) as usize % self.sprites.len();
@@ -156,6 +158,12 @@ mod tests {
     #[test]
     fn mario_is_deterministic() {
         assert_eq!(render_at(450), render_at(450));
+    }
+
+    #[test]
+    fn mario_ground_still_scrolls_after_30_days_of_uptime() {
+        let thirty_days = 30 * 24 * 3600 * 1000;
+        assert_ne!(render_at(thirty_days), render_at(thirty_days + 33));
     }
 
     #[test]
