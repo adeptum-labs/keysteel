@@ -1,5 +1,5 @@
 use crate::runtime::Shared;
-use keysteel_hid::HidrawDevice;
+use keysteel_hid::{is_keyboard_hid_id, HidrawDevice};
 use std::os::unix::io::AsRawFd;
 use std::sync::Arc;
 use std::thread::sleep;
@@ -23,6 +23,18 @@ pub fn try_attach(shared: &Shared) {
     }
 }
 
+/// True when a hidraw node of the keyboard itself appeared, not one of some
+/// other device. The kernel names the device in the `HID_ID` of its parent.
+fn is_keyboard_added(event: &udev::Event) -> bool {
+    event.event_type() == udev::EventType::Add
+        && event
+            .parent_with_subsystem("hid")
+            .ok()
+            .flatten()
+            .and_then(|hid| hid.property_value("HID_ID").and_then(|v| v.to_str()).map(is_keyboard_hid_id))
+            .unwrap_or(false)
+}
+
 /// Blocks forever, attaching the keyboard whenever a hidraw node appears.
 pub fn watch(shared: Arc<Shared>) -> std::io::Result<()> {
     let monitor = udev::MonitorBuilder::new()?.match_subsystem("hidraw")?.listen()?;
@@ -37,9 +49,7 @@ pub fn watch(shared: Arc<Shared>) -> std::io::Result<()> {
             }
             return Err(error);
         }
-        let added = monitor
-            .iter()
-            .any(|event| event.event_type() == udev::EventType::Add);
+        let added = monitor.iter().any(|event| is_keyboard_added(&event));
         if added {
             try_attach(&shared);
         }
