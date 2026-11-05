@@ -56,7 +56,13 @@ busctl --user call org.keysteel.Daemon /org/keysteel/Daemon \
     org.keysteel.Daemon SetScene s boing
 ```
 
-The scene ids are `off`, `boing` and `mario`.
+The scene ids are `off`, `boing` and `mario`. `off` gives the screen back to
+the keyboard's own display.
+
+By default the keyboard draws its own status text over the top 12 rows of
+the OLED. Turn off "display icons" in the keyboard's OLED menu to use the
+whole 128x40 screen. Keysteel cannot change that option: it is only
+available from the keyboard.
 
 ## License
 
