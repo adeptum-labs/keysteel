@@ -43,18 +43,20 @@ impl Scene for Boing {
 
     fn render(&mut self, elapsed: Duration, frame: &mut Frame) {
         frame.clear();
-        let t = elapsed.as_secs_f32();
+        // f64 keeps the motion smooth after days of uptime; each cycle is
+        // wrapped before it drops to f32.
+        let t = elapsed.as_secs_f64();
 
-        let trip = (t / TRIP_SECS).fract();
+        let trip = (t / TRIP_SECS as f64).fract() as f32;
         let across = if trip < 0.5 { trip * 2.0 } else { 2.0 - trip * 2.0 };
         let margin = RADIUS + 1.0;
         let cx = margin + across * (WIDTH as f32 - 2.0 * margin);
 
-        let phase = (t / BOUNCE_SECS).fract();
+        let phase = (t / BOUNCE_SECS as f64).fract() as f32;
         let height = 1.0 - (2.0 * phase - 1.0).powi(2);
         let cy = GROUND_Y - RADIUS - height * MAX_RISE;
 
-        let spin = t * SPIN_RAD_PER_SEC;
+        let spin = ((t * SPIN_RAD_PER_SEC as f64) % std::f64::consts::TAU) as f32;
 
         let shadow_half = RADIUS * (1.0 - 0.5 * height);
         let mut x = (cx - shadow_half).round() as i32;
@@ -104,6 +106,12 @@ mod tests {
     #[test]
     fn boing_is_deterministic() {
         assert_eq!(render_at(700), render_at(700));
+    }
+
+    #[test]
+    fn boing_still_moves_after_30_days_of_uptime() {
+        let thirty_days = 30 * 24 * 3600 * 1000;
+        assert_ne!(render_at(thirty_days), render_at(thirty_days + 33));
     }
 
     #[test]
