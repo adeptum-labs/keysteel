@@ -3,7 +3,7 @@ use crate::scenes::{boing::Boing, mario::Mario, off::Off};
 use std::time::Duration;
 
 /// Something that can draw itself onto the OLED.
-pub trait Scene {
+pub trait Scene: Send {
     fn id(&self) -> &'static str;
     fn name(&self) -> &'static str;
     /// False when the picture never changes, so no frame timer is needed.
