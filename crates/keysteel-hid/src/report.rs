@@ -20,6 +20,15 @@ pub fn encode_report(frame: &Frame) -> Vec<u8> {
     report
 }
 
+/// Output report that hands the screen back to the keyboard's own display:
+/// report id, device command 0x1f, sub-command 0x82, zero padding to 65 bytes.
+pub fn encode_reset_report() -> Vec<u8> {
+    let mut report = vec![0u8; 65];
+    report[1] = 0x1f;
+    report[2] = 0x82;
+    report
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -32,6 +41,14 @@ mod tests {
         assert_eq!(report.len(), REPORT_LEN);
         assert_eq!(&report[..5], &[0x00, 0x38, 0x83, 0x00, 0x00]);
         assert!(report[5..].iter().all(|b| *b == 0));
+    }
+
+    #[test]
+    fn reset_report_is_id_command_and_padding() {
+        let report = encode_reset_report();
+        assert_eq!(report.len(), 65);
+        assert_eq!(&report[..3], &[0x00, 0x1f, 0x82]);
+        assert!(report[3..].iter().all(|b| *b == 0));
     }
 
     #[test]

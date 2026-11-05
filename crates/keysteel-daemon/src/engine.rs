@@ -101,6 +101,10 @@ mod tests {
         fn send_frame(&mut self, _frame: &Frame) -> Result<(), DeviceError> {
             Err(DeviceError::Hid("unplugged".into()))
         }
+
+        fn reset(&mut self) -> Result<(), DeviceError> {
+            Err(DeviceError::Hid("unplugged".into()))
+        }
     }
 
     fn is_blank(frame: &Frame) -> bool {

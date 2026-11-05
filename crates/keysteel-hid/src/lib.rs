@@ -4,7 +4,7 @@ mod report;
 
 pub use hidraw::HidrawDevice;
 pub use mock::MockDevice;
-pub use report::{encode_report, REPORT_LEN};
+pub use report::{encode_report, encode_reset_report, REPORT_LEN};
 
 use keysteel_core::frame::Frame;
 
@@ -28,6 +28,8 @@ impl std::error::Error for DeviceError {}
 /// A display that can show one frame at a time.
 pub trait Device {
     fn send_frame(&mut self, frame: &Frame) -> Result<(), DeviceError>;
+    /// Gives the screen back to the keyboard's own display.
+    fn reset(&mut self) -> Result<(), DeviceError>;
 }
 
 #[cfg(test)]
@@ -43,5 +45,14 @@ mod tests {
         device.send_frame(&Frame::new()).unwrap();
         assert_eq!(device.frames.len(), 2);
         assert_eq!(device.frames[0], frame);
+    }
+
+    #[test]
+    fn mock_counts_resets() {
+        let mut device = MockDevice::default();
+        device.reset().unwrap();
+        device.reset().unwrap();
+        assert_eq!(device.resets, 2);
+        assert!(device.frames.is_empty());
     }
 }

@@ -1,4 +1,4 @@
-use crate::{encode_report, Device, DeviceError};
+use crate::{encode_report, encode_reset_report, Device, DeviceError};
 use keysteel_core::frame::Frame;
 
 pub const VENDOR_ID: u16 = 0x1038;
@@ -33,6 +33,13 @@ impl Device for HidrawDevice {
     fn send_frame(&mut self, frame: &Frame) -> Result<(), DeviceError> {
         self.handle
             .send_feature_report(&encode_report(frame))
+            .map_err(|e| DeviceError::Hid(e.to_string()))
+    }
+
+    fn reset(&mut self) -> Result<(), DeviceError> {
+        self.handle
+            .write(&encode_reset_report())
+            .map(|_| ())
             .map_err(|e| DeviceError::Hid(e.to_string()))
     }
 }
