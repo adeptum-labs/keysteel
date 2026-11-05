@@ -13,9 +13,9 @@ The first target device is the **Apex Pro TKL** with its OLED display.
 ## Status
 
 Early days. The daemon can show scenes on the OLED of the Apex Pro TKL
-Gen 3 (a Boing ball and Mario running sideways, or nothing). The desktop app
-for picking a scene is in progress. The feature list below is what Keysteel is
-meant to do, not all of what it does today.
+Gen 3 (a Boing ball and Mario running sideways, or nothing), and a desktop app
+picks the scene. The feature list below is what Keysteel is meant to do, not
+all of what it does today.
 
 ## Planned features
 
@@ -46,10 +46,13 @@ packaging/install.sh
 ```
 
 The script installs the daemon for your user and starts it as a systemd user
-service. It then prints the one command that needs root: installing the udev
-rule that lets your user talk to the keyboard.
+service. It installs the app too when the GTK 4 development files are found,
+and then prints the one command that needs root: installing the udev rule that
+lets your user talk to the keyboard.
 
-Pick a scene from the command line until the app is ready:
+Start Keysteel from the application menu and pick a scene in the window. The
+daemon has to be running; the window says so and offers Retry if it is not.
+You can also pick a scene from a terminal:
 
 ```
 busctl --user call org.keysteel.Daemon /org/keysteel/Daemon \
