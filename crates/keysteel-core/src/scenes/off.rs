@@ -18,6 +18,10 @@ impl Scene for Off {
         false
     }
 
+    fn shows_picture(&self) -> bool {
+        false
+    }
+
     fn render(&mut self, _elapsed: Duration, frame: &mut Frame) {
         frame.clear();
     }

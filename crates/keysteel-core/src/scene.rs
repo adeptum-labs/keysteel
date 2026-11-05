@@ -8,6 +8,10 @@ pub trait Scene: Send {
     fn name(&self) -> &'static str;
     /// False when the picture never changes, so no frame timer is needed.
     fn animated(&self) -> bool;
+    /// False for a scene that leaves the screen to the keyboard's own display.
+    fn shows_picture(&self) -> bool {
+        true
+    }
     /// Clears `frame` and draws the picture for `elapsed` since the scene
     /// started. The result depends only on `elapsed`.
     fn render(&mut self, elapsed: Duration, frame: &mut Frame);
@@ -39,6 +43,12 @@ mod tests {
     #[test]
     fn scene_by_id_unknown_is_none() {
         assert!(scene_by_id("nope").is_none());
+    }
+
+    #[test]
+    fn only_off_hands_the_display_back() {
+        let flags: Vec<bool> = all_scenes().iter().map(|s| s.shows_picture()).collect();
+        assert_eq!(flags, vec![false, true, true]);
     }
 
     #[test]
