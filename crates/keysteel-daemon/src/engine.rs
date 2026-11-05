@@ -81,8 +81,13 @@ impl<D: Device> Engine<D> {
         let Some(device) = self.device.as_mut() else {
             return;
         };
-        self.scene.render(self.last_elapsed, &mut self.frame);
-        if device.send_frame(&self.frame).is_err() {
+        let result = if self.scene.shows_picture() {
+            self.scene.render(self.last_elapsed, &mut self.frame);
+            device.send_frame(&self.frame)
+        } else {
+            device.reset()
+        };
+        if result.is_err() {
             self.device = None;
         }
     }
@@ -121,8 +126,31 @@ mod tests {
         engine.set_scene("boing").unwrap();
         assert_eq!(engine.current(), "boing");
         let frames = &engine.device().unwrap().frames;
-        assert_eq!(frames.len(), 2);
-        assert!(!is_blank(&frames[1]));
+        assert_eq!(frames.len(), 1);
+        assert!(!is_blank(&frames[0]));
+    }
+
+    #[test]
+    fn starting_on_off_resets_instead_of_sending_a_frame() {
+        let engine = mock_engine("off");
+        let device = engine.device().unwrap();
+        assert_eq!(device.resets, 1);
+        assert!(device.frames.is_empty());
+    }
+
+    #[test]
+    fn attaching_a_device_on_off_resets_it() {
+        let mut engine: Engine<MockDevice> = Engine::new(None, "off");
+        engine.set_device(Some(MockDevice::default()));
+        let device = engine.device().unwrap();
+        assert_eq!(device.resets, 1);
+        assert!(device.frames.is_empty());
+    }
+
+    #[test]
+    fn failed_reset_drops_device() {
+        let engine = Engine::new(Some(FailingDevice), "off");
+        assert!(engine.device().is_none());
     }
 
     #[test]
@@ -141,15 +169,15 @@ mod tests {
     }
 
     #[test]
-    fn off_scene_sends_one_blank_frame_then_no_more_on_tick() {
+    fn off_scene_resets_once_and_sends_nothing_on_tick() {
         let mut engine = mock_engine("boing");
-        engine.set_scene("off").unwrap();
         let sent = engine.device().unwrap().frames.len();
+        engine.set_scene("off").unwrap();
         engine.tick(Duration::from_secs(1));
         engine.tick(Duration::from_secs(2));
-        let frames = &engine.device().unwrap().frames;
-        assert_eq!(frames.len(), sent);
-        assert!(is_blank(frames.last().unwrap()));
+        let device = engine.device().unwrap();
+        assert_eq!(device.resets, 1);
+        assert_eq!(device.frames.len(), sent);
     }
 
     #[test]
