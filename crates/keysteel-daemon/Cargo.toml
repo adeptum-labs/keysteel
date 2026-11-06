@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+evdev = "0.13.2"
 keysteel-core = { path = "../keysteel-core" }
 keysteel-hid = { path = "../keysteel-hid" }
 libc = "0.2.191"
