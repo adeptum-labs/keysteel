@@ -1,11 +1,13 @@
 mod dbus;
 mod hotplug;
 mod runtime;
+mod scroll;
 
 use keysteel_daemon::engine::Engine;
 use keysteel_daemon::state;
 use keysteel_hid::HidrawDevice;
 use runtime::Shared;
+use scroll::Roller;
 use std::sync::Arc;
 use zbus::blocking::connection;
 use zbus::fdo::{RequestNameFlags, RequestNameReply};
@@ -16,8 +18,10 @@ fn main() {
     // copy started by hand fails before it can touch the display.
     let shared = Arc::new(Shared::new(Engine::<HidrawDevice>::new(None, &scene)));
 
+    let roller = Arc::new(Roller::new(state::roller_path().map(|p| state::load_roller(&p)).unwrap_or(false)));
+
     let connection = match connection::Builder::session()
-        .and_then(|b| b.serve_at(dbus::OBJECT_PATH, dbus::Service { shared: shared.clone() }))
+        .and_then(|b| b.serve_at(dbus::OBJECT_PATH, dbus::Service { shared: shared.clone(), roller: roller.clone() }))
         .and_then(|b| b.build())
     {
         Ok(connection) => connection,
@@ -50,6 +54,8 @@ fn main() {
             std::process::exit(1);
         }
     });
+
+    std::thread::spawn(move || scroll::run(&roller));
 
     shared.render_loop();
 }

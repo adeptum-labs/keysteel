@@ -1,4 +1,5 @@
 use crate::runtime::Shared;
+use crate::scroll::Roller;
 use keysteel_core::scene::all_scenes;
 use keysteel_daemon::state;
 use std::sync::Arc;
@@ -10,6 +11,7 @@ pub const OBJECT_PATH: &str = "/org/keysteel/Daemon";
 
 pub struct Service {
     pub shared: Arc<Shared>,
+    pub roller: Arc<Roller>,
 }
 
 #[interface(name = "org.keysteel.Daemon")]
@@ -44,5 +46,19 @@ impl Service {
 
     fn get_scene(&self) -> String {
         self.shared.lock().engine.current().to_string()
+    }
+
+    /// Whether the roller scrolls the window instead of changing the volume.
+    fn get_roller_scroll(&self) -> bool {
+        self.roller.get()
+    }
+
+    fn set_roller_scroll(&self, on: bool) {
+        self.roller.set(on);
+        if let Some(path) = state::roller_path() {
+            if let Err(e) = state::save_roller(&path, on) {
+                eprintln!("cannot save roller setting: {e}");
+            }
+        }
     }
 }
