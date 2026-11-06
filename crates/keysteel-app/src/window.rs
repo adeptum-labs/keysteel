@@ -7,7 +7,7 @@ use keysteel_app::client::{Client, ClientError};
 use keysteel_app::preview::{preview_size, scale_frame_to_rgba};
 use keysteel_core::frame::Frame;
 use keysteel_core::scene::{all_scenes, scene_by_id, Scene};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -73,13 +73,15 @@ struct Connected {
     client: Client,
     scenes: Vec<(String, String)>,
     current: String,
+    roller: bool,
 }
 
 fn connect_blocking() -> Result<Connected, ClientError> {
     let client = Client::connect()?;
     let scenes = client.list_scenes()?;
     let current = client.current()?;
-    Ok(Connected { client, scenes, current })
+    let roller = client.roller_scroll()?;
+    Ok(Connected { client, scenes, current, roller })
 }
 
 fn local_scenes() -> Vec<(String, String)> {
@@ -92,6 +94,21 @@ struct Ui {
     status: Label,
     retry: Button,
     preview: Rc<RefCell<Preview>>,
+    roller: CheckButton,
+    /// The daemon connection, once there is one.
+    client: RefCell<Option<Arc<Client>>>,
+    /// True while the tick is set from the daemon's answer, so that does not
+    /// count as the user clicking it.
+    syncing: Cell<bool>,
+}
+
+/// Shows the daemon's roller setting, or disables the tick without one.
+fn show_roller(ui: &Ui, client: Option<Arc<Client>>, on: bool) {
+    ui.syncing.set(true);
+    ui.roller.set_active(on);
+    ui.roller.set_sensitive(client.is_some());
+    ui.syncing.set(false);
+    *ui.client.borrow_mut() = client;
 }
 
 /// Fills the scene list. Without a client the list is shown but disabled.
@@ -149,6 +166,7 @@ fn connect(ui: Rc<Ui>) {
             Ok(Ok(connected)) => {
                 ui.status.set_text("");
                 let client = Some(Arc::new(connected.client));
+                show_roller(&ui, client.clone(), connected.roller);
                 populate(&ui, client, &connected.scenes, &connected.current);
             }
             failure => {
@@ -157,6 +175,7 @@ fn connect(ui: Rc<Ui>) {
                     _ => "could not reach the daemon".to_string(),
                 };
                 ui.status.set_text(&message);
+                show_roller(&ui, None, false);
                 populate(&ui, None, &local_scenes(), "off");
                 ui.retry.set_visible(true);
             }
@@ -194,6 +213,11 @@ pub fn build(app: &Application) {
     status_row.append(&status);
     status_row.append(&retry);
 
+    let roller = CheckButton::with_label("Roller scrolls the window");
+    roller.set_tooltip_text(Some("Turn the roller into a mouse wheel instead of changing the volume"));
+    roller.set_sensitive(false);
+    list.append(&roller);
+
     let row = GtkBox::new(Orientation::Horizontal, 24);
     row.append(&list);
     row.append(&picture);
@@ -212,7 +236,35 @@ pub fn build(app: &Application) {
         .build()
         .present();
 
-    let ui = Rc::new(Ui { radios, status, retry: retry.clone(), preview });
+    let ui = Rc::new(Ui {
+        radios,
+        status,
+        retry: retry.clone(),
+        preview,
+        roller: roller.clone(),
+        client: RefCell::new(None),
+        syncing: Cell::new(false),
+    });
+    {
+        let ui = ui.clone();
+        roller.connect_toggled(move |button| {
+            if ui.syncing.get() {
+                return;
+            }
+            let Some(client) = ui.client.borrow().clone() else {
+                return;
+            };
+            let on = button.is_active();
+            let status = ui.status.clone();
+            glib::spawn_future_local(async move {
+                match gio::spawn_blocking(move || client.set_roller_scroll(on)).await {
+                    Ok(Ok(())) => status.set_text(""),
+                    Ok(Err(error)) => status.set_text(&error.to_string()),
+                    Err(_) => status.set_text("roller setting failed"),
+                }
+            });
+        });
+    }
     {
         let ui = ui.clone();
         retry.connect_clicked(move |_| connect(ui.clone()));
