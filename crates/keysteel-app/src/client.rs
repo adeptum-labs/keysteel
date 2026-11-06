@@ -75,6 +75,15 @@ impl Client {
         self.proxy.call("GetRollerScroll", &()).map_err(map_error)
     }
 
+    /// Wheel notches for each click of the roller.
+    pub fn roller_speed(&self) -> Result<u32, ClientError> {
+        self.proxy.call("GetRollerSpeed", &()).map_err(map_error)
+    }
+
+    pub fn set_roller_speed(&self, speed: u32) -> Result<(), ClientError> {
+        self.proxy.call("SetRollerSpeed", &(speed,)).map_err(map_error)
+    }
+
     pub fn set_roller_scroll(&self, on: bool) -> Result<(), ClientError> {
         self.proxy.call("SetRollerScroll", &(on,)).map_err(map_error)
     }
