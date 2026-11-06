@@ -62,6 +62,13 @@ busctl --user call org.keysteel.Daemon /org/keysteel/Daemon \
 The scene ids are `off`, `boing` and `mario`. `off` gives the screen back to
 the keyboard's own display.
 
+The roller in the corner of the keyboard changes the volume. Tick "Roller
+scrolls the window" in the app to make it scroll like a mouse wheel
+instead, or run `busctl --user call org.keysteel.Daemon
+/org/keysteel/Daemon org.keysteel.Daemon SetRollerScroll b true`. The
+setting is remembered. It needs the same udev rule as the display, which
+also lets your user open the keyboard's media key device and `/dev/uinput`.
+
 By default the keyboard draws its own status text over the top 12 rows of
 the OLED. Turn off "display icons" in the keyboard's OLED menu to use the
 whole 128x40 screen. Keysteel cannot change that option: it is only
