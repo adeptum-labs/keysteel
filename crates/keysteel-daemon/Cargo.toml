@@ -22,6 +22,9 @@ zbus = "5"
 # packaging/deb/stage.sh, which prepares the files named below.
 [package.metadata.deb]
 name = "keysteel"
+maintainer = "Adam Waldenberg <adam@adeptum.se>"
+copyright = "2026 Adeptum AB and Adam Waldenberg"
+changelog = "../../packaging/deb/changelog"
 section = "utils"
 priority = "optional"
 depends = "$auto, libgtk-4-1 (>= 4.10), udev"
