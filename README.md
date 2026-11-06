@@ -1,6 +1,6 @@
 # Keysteel
 
-<img src="docs/screenshot.png" align="right" width="300" alt="The Keysteel app: display scene, roller and key lighting settings">
+<img src="docs/app-window.png" align="right" width="300" alt="The Keysteel app: display scene, roller and key lighting settings">
 
 An unofficial Linux companion for SteelSeries keyboards, in the spirit of
 SteelSeries GG. Keysteel runs quietly in the background from the moment you
