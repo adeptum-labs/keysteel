@@ -14,7 +14,8 @@ The first target device is the **Apex Pro TKL** with its OLED display.
 
 - Shows scenes on the OLED display of the Apex Pro TKL Gen 3: an Amiga
   Boing ball and Super Mario running, jumping over pipes and onto brick
-  platforms in a level that never repeats. "Off" gives the
+  platforms in a level that never repeats, and the Adeptum logo scrolling
+  across the screen. "Off" gives the
   screen back to the keyboard's own display.
 - Turns the roller in the corner into a mouse wheel, with a speed you can
   set.
@@ -55,7 +56,7 @@ busctl --user call org.keysteel.Daemon /org/keysteel/Daemon \
     org.keysteel.Daemon SetScene s boing
 ```
 
-The scene ids are `off`, `boing` and `mario`. `off` gives the screen back to
+The scene ids are `off`, `boing`, `mario` and `adeptum`. `off` gives the screen back to
 the keyboard's own display.
 
 The roller in the corner of the keyboard changes the volume. Tick "Roller
