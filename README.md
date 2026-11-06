@@ -91,7 +91,7 @@ available from the keyboard.
 
 ## License
 
-Copyright © 2026 Adeptum AB, Org.nr 559494-1824, and Adam Waldenberg.
+Copyright © 2026 Adam Waldenberg and Adeptum AB, Org.nr 559494-1824.
 
 Keysteel is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free

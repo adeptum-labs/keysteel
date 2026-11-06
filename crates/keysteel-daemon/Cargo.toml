@@ -23,7 +23,7 @@ zbus = "5"
 [package.metadata.deb]
 name = "keysteel"
 maintainer = "Adam Waldenberg <adam@adeptum.se>"
-copyright = "2026 Adeptum AB, Org.nr 559494-1824, and Adam Waldenberg"
+copyright = "2026 Adam Waldenberg and Adeptum AB, Org.nr 559494-1824"
 changelog = "../../packaging/deb/changelog"
 section = "utils"
 priority = "optional"
