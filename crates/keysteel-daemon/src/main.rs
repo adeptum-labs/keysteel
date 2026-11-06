@@ -1,11 +1,14 @@
 mod dbus;
 mod hotplug;
+mod light_runtime;
 mod runtime;
 mod scroll;
 
 use keysteel_daemon::engine::Engine;
+use keysteel_daemon::lights::LightEngine;
 use keysteel_daemon::state;
 use keysteel_hid::HidrawDevice;
+use light_runtime::LightShared;
 use runtime::Shared;
 use scroll::Roller;
 use std::sync::Arc;
@@ -18,13 +21,18 @@ fn main() {
     // copy started by hand fails before it can touch the display.
     let shared = Arc::new(Shared::new(Engine::<HidrawDevice>::new(None, &scene)));
 
+    let (light_scheme, light_params) = state::lighting_path()
+        .map(|p| state::load_lighting(&p))
+        .unwrap_or_else(|| ("default".into(), Default::default()));
+    let lights = Arc::new(LightShared::new(LightEngine::new(None, &light_scheme, light_params)));
+
     let roller = Arc::new(Roller::new(
         state::roller_path().map(|p| state::load_roller(&p)).unwrap_or(false),
         state::speed_path().map(|p| state::load_speed(&p)).unwrap_or(state::DEFAULT_SPEED),
     ));
 
     let connection = match connection::Builder::session()
-        .and_then(|b| b.serve_at(dbus::OBJECT_PATH, dbus::Service { shared: shared.clone(), roller: roller.clone() }))
+        .and_then(|b| b.serve_at(dbus::OBJECT_PATH, dbus::Service { shared: shared.clone(), lights: lights.clone(), roller: roller.clone() }))
         .and_then(|b| b.build())
     {
         Ok(connection) => connection,
@@ -48,9 +56,10 @@ fn main() {
     }
 
     let watcher = shared.clone();
+    let watched_lights = lights.clone();
     std::thread::spawn(move || {
-        hotplug::try_attach(&watcher);
-        if let Err(e) = hotplug::watch(watcher) {
+        hotplug::try_attach(&watcher, &watched_lights);
+        if let Err(e) = hotplug::watch(watcher, watched_lights) {
             // Without the watcher a replugged keyboard is never found again,
             // so stop and let the service manager start a fresh daemon.
             eprintln!("hotplug watcher stopped: {e}");
@@ -59,6 +68,7 @@ fn main() {
     });
 
     std::thread::spawn(move || scroll::run(&roller));
+    std::thread::spawn(move || lights.run());
 
     shared.render_loop();
 }

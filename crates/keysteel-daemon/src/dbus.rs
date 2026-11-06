@@ -1,5 +1,7 @@
+use crate::light_runtime::LightShared;
 use crate::runtime::Shared;
 use crate::scroll::Roller;
+use keysteel_core::lighting::{all_light_schemes, LightParams, Rgb};
 use keysteel_core::scene::all_scenes;
 use keysteel_daemon::state;
 use std::sync::Arc;
@@ -11,6 +13,7 @@ pub const OBJECT_PATH: &str = "/org/keysteel/Daemon";
 
 pub struct Service {
     pub shared: Arc<Shared>,
+    pub lights: Arc<LightShared>,
     pub roller: Arc<Roller>,
 }
 
@@ -46,6 +49,42 @@ impl Service {
 
     fn get_scene(&self) -> String {
         self.shared.lock().engine.current().to_string()
+    }
+
+    /// All lighting schemes as (id, name, takes a colour, uses the speed,
+    /// uses the intensity).
+    fn list_light_schemes(&self) -> Vec<(String, String, bool, bool, bool)> {
+        all_light_schemes()
+            .iter()
+            .map(|s| (s.id().to_string(), s.name().to_string(), s.takes_colour(), s.uses_speed(), s.uses_intensity()))
+            .collect()
+    }
+
+    /// The scheme id, intensity (0 to 100), red, green, blue and speed (1 to 10).
+    fn get_lighting(&self) -> (String, u8, u8, u8, u8, u8) {
+        let inner = self.lights.lock();
+        let p = inner.engine.params();
+        (inner.engine.scheme_id().to_string(), p.intensity, p.colour.r, p.colour.g, p.colour.b, p.speed)
+    }
+
+    fn set_lighting(&self, scheme: &str, intensity: u8, red: u8, green: u8, blue: u8, speed: u8) -> fdo::Result<()> {
+        let params = LightParams { intensity, colour: Rgb::new(red, green, blue), speed };
+        {
+            let mut inner = self.lights.lock();
+            inner
+                .engine
+                .set(scheme, params)
+                .map_err(|e| fdo::Error::InvalidArgs(e.to_string()))?;
+            inner.started = Instant::now();
+            // Saved under the lock so the file matches what was applied last.
+            if let Some(path) = state::lighting_path() {
+                if let Err(e) = state::save_lighting(&path, scheme, &inner.engine.params()) {
+                    eprintln!("cannot save lighting: {e}");
+                }
+            }
+        }
+        self.lights.wake();
+        Ok(())
     }
 
     /// Whether the roller scrolls the window instead of changing the volume.

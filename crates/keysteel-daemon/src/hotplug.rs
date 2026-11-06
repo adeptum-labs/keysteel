@@ -1,5 +1,6 @@
+use crate::light_runtime::LightShared;
 use crate::runtime::Shared;
-use keysteel_hid::{is_keyboard_hid_id, HidrawDevice};
+use keysteel_hid::{is_keyboard_hid_id, HidrawDevice, HidrawLights};
 use std::os::unix::io::AsRawFd;
 use std::sync::Arc;
 use std::thread::sleep;
@@ -9,14 +10,19 @@ use std::time::Duration;
 const OPEN_ATTEMPTS: u32 = 10;
 const OPEN_RETRY: Duration = Duration::from_millis(200);
 
-/// Opens the keyboard and gives it to the engine, replacing any handle it
-/// already holds. A handle can go stale without a failed send (unplugged
-/// while no frames were being sent), so a node appearing always wins.
-pub fn try_attach(shared: &Shared) {
+/// Opens the keyboard and gives it to the display and lighting engines,
+/// replacing any handle they already hold. A handle can go stale without a
+/// failed send (unplugged while nothing was being sent), so a node appearing
+/// always wins.
+pub fn try_attach(shared: &Shared, lights: &LightShared) {
     for _ in 0..OPEN_ATTEMPTS {
         if let Ok(device) = HidrawDevice::open() {
             shared.lock().engine.set_device(Some(device));
             shared.wake();
+            if let Ok(handle) = HidrawLights::open() {
+                lights.lock().engine.set_device(Some(handle));
+                lights.wake();
+            }
             return;
         }
         sleep(OPEN_RETRY);
@@ -36,7 +42,7 @@ fn is_keyboard_added(event: &udev::Event) -> bool {
 }
 
 /// Blocks forever, attaching the keyboard whenever a hidraw node appears.
-pub fn watch(shared: Arc<Shared>) -> std::io::Result<()> {
+pub fn watch(shared: Arc<Shared>, lights: Arc<LightShared>) -> std::io::Result<()> {
     let monitor = udev::MonitorBuilder::new()?.match_subsystem("hidraw")?.listen()?;
     let mut poll_fd = libc::pollfd { fd: monitor.as_raw_fd(), events: libc::POLLIN, revents: 0 };
     loop {
@@ -51,7 +57,7 @@ pub fn watch(shared: Arc<Shared>) -> std::io::Result<()> {
         }
         let added = monitor.iter().any(|event| is_keyboard_added(&event));
         if added {
-            try_attach(&shared);
+            try_attach(&shared, &lights);
         }
     }
 }
