@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Copyright © 2026 Adeptum AB and Adam Waldenberg
+// Copyright © 2026 Adeptum AB, Org.nr 559494-1824, and Adam Waldenberg
 //
 // This file is part of Keysteel.
 //
