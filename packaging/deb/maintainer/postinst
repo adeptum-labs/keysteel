@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = configure ]; then
+    # Let the logged-in user open the keyboard without root.
+    if command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload || true
+        udevadm trigger --subsystem-match=hidraw --subsystem-match=input \
+            --subsystem-match=misc || true
+    fi
+    # Start the daemon at every login. This also works without systemd
+    # running, as in a chroot, where it is simply skipped.
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl --global enable keysteel-daemon.service >/dev/null 2>&1 || true
+    fi
+fi
+
+exit 0
