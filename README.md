@@ -10,30 +10,26 @@ The first target device is the **Apex Pro TKL** with its OLED display.
 > or supported by SteelSeries. SteelSeries and Apex are trademarks of their
 > respective owners.
 
-## Status
+## What it does
 
-Early days. The daemon can show scenes on the OLED of the Apex Pro TKL
-Gen 3 (a Boing ball and Mario running sideways, or nothing), and a desktop app
-picks the scene. The feature list below is what Keysteel is meant to do, not
-all of what it does today.
+- Shows scenes on the OLED display of the Apex Pro TKL Gen 3: an Amiga
+  Boing ball and Super Mario running, jumping over pipes and onto brick
+  platforms in a level that never repeats. "Off" gives the
+  screen back to the keyboard's own display.
+- Turns the roller in the corner into a mouse wheel, with a speed you can
+  set.
+- Picks the scene and the roller settings from a small desktop app.
 
-## Planned features
-
-- Per-key RGB lighting and lighting effects
-- Key remapping
-- Macros
-- Profiles that can be switched on the fly
-- OLED display content (text, images, status information)
-
-## Planned design
+## How it is built
 
 - Written in Rust.
-- **Background service** that talks to the keyboard over USB HID and applies
-  the active profile. It starts at login through a systemd user service or an
-  XDG autostart entry and is built to idle on a few megabytes of memory.
-- **Desktop app** with a tray icon, opened on demand, that configures the
-  service.
-- A udev rule so the keyboard can be used without root privileges.
+- A **background daemon** owns the keyboard. It draws the scenes, handles
+  the roller and offers a D-Bus service, `org.keysteel.Daemon`, on the
+  session bus. It starts at login as a systemd user service, or on demand
+  through D-Bus activation, and sleeps when nothing is animating.
+- A **desktop app** (GTK 4), started from the application menu, talks to
+  the daemon over D-Bus. It has no tray icon.
+- A udev rule lets your user use the keyboard without root.
 - Primary desktop target: Linux Mint (Cinnamon).
 
 ## Building
