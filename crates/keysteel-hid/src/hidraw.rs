@@ -22,6 +22,8 @@ use crate::{
     KeyColour, KeyLights,
 };
 use keysteel_core::frame::Frame;
+use std::sync::Mutex;
+use std::time::Duration;
 
 pub const VENDOR_ID: u16 = 0x1038;
 pub const PRODUCT_ID: u16 = 0x1642;
@@ -37,6 +39,40 @@ pub fn is_keyboard_hid_id(hid_id: &str) -> bool {
         (Some(Ok(vendor)), Some(Ok(product)), None)
             if vendor == VENDOR_ID as u32 && product == PRODUCT_ID as u32
     )
+}
+
+/// The keyboard takes one report at a time. The display and the lighting use
+/// separate handles from separate threads, and reports that overlap can make
+/// the keyboard refuse one with a "Broken pipe".
+static BUS: Mutex<()> = Mutex::new(());
+
+const SEND_ATTEMPTS: u32 = 3;
+const SEND_RETRY: Duration = Duration::from_millis(10);
+
+/// Runs `send` up to `attempts` times, pausing `delay` after each failure.
+/// A refused report is usually accepted when sent again a moment later.
+fn retried(attempts: u32, delay: Duration, mut send: impl FnMut() -> Result<(), String>) -> Result<(), DeviceError> {
+    let mut last = String::new();
+    for _ in 0..attempts.max(1) {
+        match send() {
+            Ok(()) => return Ok(()),
+            Err(message) => {
+                last = message;
+                std::thread::sleep(delay);
+            }
+        }
+    }
+    Err(DeviceError::Hid(last))
+}
+
+fn send_feature(handle: &hidapi::HidDevice, report: &[u8]) -> Result<(), DeviceError> {
+    let _turn = BUS.lock().unwrap_or_else(|e| e.into_inner());
+    retried(SEND_ATTEMPTS, SEND_RETRY, || handle.send_feature_report(report).map_err(|e| e.to_string()))
+}
+
+fn send_output(handle: &hidapi::HidDevice, report: &[u8]) -> Result<(), DeviceError> {
+    let _turn = BUS.lock().unwrap_or_else(|e| e.into_inner());
+    retried(SEND_ATTEMPTS, SEND_RETRY, || handle.write(report).map(|_| ()).map_err(|e| e.to_string()))
 }
 
 /// Opens the interface that takes the display and lighting reports.
@@ -76,31 +112,21 @@ impl HidrawLights {
 
 impl KeyLights for HidrawLights {
     fn set_keys(&mut self, keys: &[KeyColour]) -> Result<(), DeviceError> {
-        self.handle
-            .send_feature_report(&encode_lights_report(keys))
-            .map_err(|e| DeviceError::Hid(e.to_string()))
+        send_feature(&self.handle, &encode_lights_report(keys))
     }
 
     fn clear_keys(&mut self) -> Result<(), DeviceError> {
-        self.handle
-            .write(&encode_clear_lights_report())
-            .map(|_| ())
-            .map_err(|e| DeviceError::Hid(e.to_string()))
+        send_output(&self.handle, &encode_clear_lights_report())
     }
 }
 
 impl Device for HidrawDevice {
     fn send_frame(&mut self, frame: &Frame) -> Result<(), DeviceError> {
-        self.handle
-            .send_feature_report(&encode_report(frame))
-            .map_err(|e| DeviceError::Hid(e.to_string()))
+        send_feature(&self.handle, &encode_report(frame))
     }
 
     fn reset(&mut self) -> Result<(), DeviceError> {
-        self.handle
-            .write(&encode_reset_report())
-            .map(|_| ())
-            .map_err(|e| DeviceError::Hid(e.to_string()))
+        send_output(&self.handle, &encode_reset_report())
     }
 }
 
@@ -129,5 +155,42 @@ mod tests {
     #[test]
     fn hid_id_of_another_vendor_with_the_same_product_does_not_match() {
         assert!(!is_keyboard_hid_id("0003:0000103a:00001642"));
+    }
+
+    #[test]
+    fn a_refused_report_is_sent_again() {
+        let mut calls = 0;
+        let result = retried(3, Duration::ZERO, || {
+            calls += 1;
+            if calls < 3 {
+                Err("Broken pipe".to_string())
+            } else {
+                Ok(())
+            }
+        });
+        assert!(result.is_ok());
+        assert_eq!(calls, 3);
+    }
+
+    #[test]
+    fn a_report_that_keeps_failing_gives_up_with_the_reason() {
+        let mut calls = 0;
+        let result = retried(3, Duration::ZERO, || {
+            calls += 1;
+            Err("No such device".to_string())
+        });
+        assert_eq!(calls, 3);
+        assert!(matches!(result, Err(DeviceError::Hid(ref m)) if m == "No such device"));
+    }
+
+    #[test]
+    fn a_report_that_goes_through_is_sent_once() {
+        let mut calls = 0;
+        retried(3, Duration::ZERO, || {
+            calls += 1;
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(calls, 1);
     }
 }
