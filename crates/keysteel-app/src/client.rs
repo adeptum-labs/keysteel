@@ -42,6 +42,27 @@ fn map_error(error: zbus::Error) -> ClientError {
     }
 }
 
+/// A lighting scheme and which settings it uses.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LightScheme {
+    pub id: String,
+    pub name: String,
+    pub takes_colour: bool,
+    pub uses_speed: bool,
+    pub uses_intensity: bool,
+}
+
+/// The lighting the daemon applies.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Lighting {
+    pub scheme: String,
+    /// Percent, 0 to 100.
+    pub intensity: u8,
+    pub colour: (u8, u8, u8),
+    /// 1 to 10.
+    pub speed: u8,
+}
+
 /// Talks to the daemon over the session bus.
 pub struct Client {
     proxy: Proxy<'static>,
@@ -68,6 +89,36 @@ impl Client {
 
     pub fn set_scene(&self, id: &str) -> Result<(), ClientError> {
         self.proxy.call("SetScene", &(id,)).map_err(map_error)
+    }
+
+    /// All lighting schemes.
+    pub fn list_light_schemes(&self) -> Result<Vec<LightScheme>, ClientError> {
+        let rows: Vec<(String, String, bool, bool, bool)> =
+            self.proxy.call("ListLightSchemes", &()).map_err(map_error)?;
+        Ok(rows
+            .into_iter()
+            .map(|(id, name, takes_colour, uses_speed, uses_intensity)| LightScheme {
+                id,
+                name,
+                takes_colour,
+                uses_speed,
+                uses_intensity,
+            })
+            .collect())
+    }
+
+    /// The current lighting.
+    pub fn lighting(&self) -> Result<Lighting, ClientError> {
+        let (scheme, intensity, red, green, blue, speed): (String, u8, u8, u8, u8, u8) =
+            self.proxy.call("GetLighting", &()).map_err(map_error)?;
+        Ok(Lighting { scheme, intensity, colour: (red, green, blue), speed })
+    }
+
+    pub fn set_lighting(&self, lighting: &Lighting) -> Result<(), ClientError> {
+        let (red, green, blue) = lighting.colour;
+        self.proxy
+            .call("SetLighting", &(lighting.scheme.as_str(), lighting.intensity, red, green, blue, lighting.speed))
+            .map_err(map_error)
     }
 
     /// Whether the roller scrolls the window instead of changing the volume.
