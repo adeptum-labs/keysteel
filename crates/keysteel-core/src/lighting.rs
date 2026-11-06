@@ -131,7 +131,7 @@ pub trait LightScheme: Send {
 pub struct WarmSheen;
 
 /// The colour of the sheen at full strength.
-const SHEEN: Rgb = Rgb::new(255, 190, 95);
+const SHEEN: Rgb = Rgb::new(255, 170, 70);
 
 impl LightScheme for WarmSheen {
     fn id(&self) -> &'static str {
@@ -297,7 +297,7 @@ mod tests {
     #[test]
     fn warm_sheen_is_a_faint_yellowish_white() {
         let colour = all(WarmSheen.render(at(0.0), &params(30)));
-        assert_eq!(colour, Rgb::new(77, 57, 29));
+        assert_eq!(colour, Rgb::new(77, 51, 21));
         assert!(colour.r > colour.g && colour.g > colour.b);
         assert!(colour.r < 100);
     }
