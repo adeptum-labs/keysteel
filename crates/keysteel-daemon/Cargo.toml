@@ -17,3 +17,27 @@ keysteel-hid = { path = "../keysteel-hid" }
 libc = "0.2.191"
 udev = "0.9.3"
 zbus = "5"
+
+# One package carries both the daemon and the app. Build it with
+# packaging/deb/stage.sh, which prepares the files named below.
+[package.metadata.deb]
+name = "keysteel"
+section = "utils"
+priority = "optional"
+depends = "$auto, libgtk-4-1 (>= 4.10), udev"
+extended-description = """\
+Keysteel runs in the background from login and drives the OLED display, the \
+key lighting and the roller of a SteelSeries Apex Pro TKL Gen 3, and comes \
+with a small app for choosing the settings. It is not affiliated with \
+SteelSeries."""
+maintainer-scripts = "../../packaging/deb/maintainer"
+assets = [
+    ["target/release/keysteel-daemon", "usr/bin/", "755"],
+    ["target/release/keysteel-app", "usr/bin/", "755"],
+    ["../../target/deb-stage/70-keysteel.rules", "usr/lib/udev/rules.d/", "644"],
+    ["../../target/deb-stage/keysteel-daemon.service", "usr/lib/systemd/user/", "644"],
+    ["../../target/deb-stage/org.keysteel.Daemon.service", "usr/share/dbus-1/services/", "644"],
+    ["../../target/deb-stage/keysteel.desktop", "usr/share/applications/", "644"],
+    ["../../README.md", "usr/share/doc/keysteel/", "644"],
+    ["../../CHANGELOG.md", "usr/share/doc/keysteel/", "644"],
+]
