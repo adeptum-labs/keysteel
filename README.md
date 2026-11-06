@@ -28,9 +28,9 @@ The first target device is the **Apex Pro TKL** with its OLED display.
 
 ## See it
 
-[![The Boing ball on the keyboard's OLED, with the keys in a warm amber sheen](docs/demo-poster.jpg)](docs/demo.mp4)
+![The Boing ball on the keyboard's OLED, with the keys in a warm amber sheen](docs/demo.gif)
 
-Click the picture to play the video (no sound).
+A [full quality video](docs/demo.mp4) is in the repository too (no sound).
 
 ## Supported
 
