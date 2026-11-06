@@ -2,11 +2,15 @@ mod hidraw;
 mod mock;
 mod report;
 
-pub use hidraw::{is_keyboard_hid_id, HidrawDevice};
-pub use mock::MockDevice;
-pub use report::{encode_report, encode_reset_report, REPORT_LEN};
+pub use hidraw::{is_keyboard_hid_id, HidrawDevice, HidrawLights};
+pub use mock::{MockDevice, MockLights};
+pub use report::{
+    encode_clear_lights_report, encode_lights_report, encode_report, encode_reset_report, MAX_LIT_KEYS,
+    REPORT_LEN,
+};
 
 use keysteel_core::frame::Frame;
+use keysteel_core::lighting::{Rgb, KEYS};
 
 #[derive(Debug)]
 pub enum DeviceError {
@@ -32,6 +36,29 @@ pub trait Device {
     fn reset(&mut self) -> Result<(), DeviceError>;
 }
 
+/// One key and the colour it should show.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct KeyColour {
+    /// HID usage code of the key.
+    pub key: u8,
+    pub colour: Rgb,
+}
+
+/// The key lighting of a keyboard.
+pub trait KeyLights {
+    /// Sets the colour of each listed key; the rest are left as they are.
+    fn set_keys(&mut self, keys: &[KeyColour]) -> Result<(), DeviceError>;
+
+    /// Gives the key lighting back to the keyboard's own scheme.
+    fn clear_keys(&mut self) -> Result<(), DeviceError>;
+
+    /// Lights every key in one colour.
+    fn set_all(&mut self, colour: Rgb) -> Result<(), DeviceError> {
+        let keys: Vec<KeyColour> = KEYS.iter().map(|&key| KeyColour { key, colour }).collect();
+        self.set_keys(&keys)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -54,5 +81,16 @@ mod tests {
         device.reset().unwrap();
         assert_eq!(device.resets, 2);
         assert!(device.frames.is_empty());
+    }
+
+    #[test]
+    fn mock_lights_record_colours_and_clears() {
+        let mut lights = MockLights::default();
+        lights.set_all(Rgb::new(9, 8, 7)).unwrap();
+        lights.clear_keys().unwrap();
+        assert_eq!(lights.sets.len(), 1);
+        assert_eq!(lights.sets[0].len(), KEYS.len());
+        assert!(lights.sets[0].iter().all(|k| k.colour == Rgb::new(9, 8, 7)));
+        assert_eq!(lights.clears, 1);
     }
 }

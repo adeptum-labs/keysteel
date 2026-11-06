@@ -1,4 +1,7 @@
-use crate::{encode_report, encode_reset_report, Device, DeviceError};
+use crate::{
+    encode_clear_lights_report, encode_lights_report, encode_report, encode_reset_report, Device, DeviceError,
+    KeyColour, KeyLights,
+};
 use keysteel_core::frame::Frame;
 
 pub const VENDOR_ID: u16 = 0x1038;
@@ -17,6 +20,18 @@ pub fn is_keyboard_hid_id(hid_id: &str) -> bool {
     )
 }
 
+/// Opens the interface that takes the display and lighting reports.
+fn open_handle() -> Result<hidapi::HidDevice, DeviceError> {
+    let api = hidapi::HidApi::new().map_err(|e| DeviceError::Hid(e.to_string()))?;
+    let info = api
+        .device_list()
+        .find(|d| {
+            d.vendor_id() == VENDOR_ID && d.product_id() == PRODUCT_ID && d.interface_number() == INTERFACE
+        })
+        .ok_or(DeviceError::NotFound)?;
+    info.open_device(&api).map_err(|e| DeviceError::Hid(e.to_string()))
+}
+
 pub struct HidrawDevice {
     handle: hidapi::HidDevice,
 }
@@ -24,19 +39,34 @@ pub struct HidrawDevice {
 impl HidrawDevice {
     /// Opens the display interface of the Apex Pro TKL Gen 3.
     pub fn open() -> Result<HidrawDevice, DeviceError> {
-        let api = hidapi::HidApi::new().map_err(|e| DeviceError::Hid(e.to_string()))?;
-        let info = api
-            .device_list()
-            .find(|d| {
-                d.vendor_id() == VENDOR_ID
-                    && d.product_id() == PRODUCT_ID
-                    && d.interface_number() == INTERFACE
-            })
-            .ok_or(DeviceError::NotFound)?;
-        let handle = info
-            .open_device(&api)
-            .map_err(|e| DeviceError::Hid(e.to_string()))?;
-        Ok(HidrawDevice { handle })
+        Ok(HidrawDevice { handle: open_handle()? })
+    }
+}
+
+/// The key lighting of the Apex Pro TKL Gen 3, on its own handle so it works
+/// independently of the display.
+pub struct HidrawLights {
+    handle: hidapi::HidDevice,
+}
+
+impl HidrawLights {
+    pub fn open() -> Result<HidrawLights, DeviceError> {
+        Ok(HidrawLights { handle: open_handle()? })
+    }
+}
+
+impl KeyLights for HidrawLights {
+    fn set_keys(&mut self, keys: &[KeyColour]) -> Result<(), DeviceError> {
+        self.handle
+            .send_feature_report(&encode_lights_report(keys))
+            .map_err(|e| DeviceError::Hid(e.to_string()))
+    }
+
+    fn clear_keys(&mut self) -> Result<(), DeviceError> {
+        self.handle
+            .write(&encode_clear_lights_report())
+            .map(|_| ())
+            .map_err(|e| DeviceError::Hid(e.to_string()))
     }
 }
 
