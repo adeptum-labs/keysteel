@@ -1,2 +1,7 @@
 # Let the logged-in user talk to the Apex Pro TKL Gen 3 without root.
 KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1642", TAG+="uaccess"
+
+# The roller feature reads the keyboard's media keys and writes a virtual
+# mouse wheel. Only the media key device is opened up, not the typing keys.
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="SteelSeries Apex Pro TKL Gen 3 Consumer Control", TAG+="uaccess"
+KERNEL=="uinput", SUBSYSTEM=="misc", OPTIONS+="static_node=uinput", TAG+="uaccess"
