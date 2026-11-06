@@ -1,7 +1,8 @@
 use gtk4::prelude::*;
+use gtk4::Align;
 use gtk4::{
     gdk, gio, glib, Application, ApplicationWindow, Box as GtkBox, Button, CheckButton, ColorDialog,
-    ColorDialogButton, DropDown, Label, Orientation, Picture, Scale, StringList,
+    ColorDialogButton, DropDown, Frame as BorderFrame, Grid, Label, Orientation, Picture, Scale, Separator, StringList,
 };
 use keysteel_app::client::{Client, ClientError, LightScheme, Lighting};
 use keysteel_app::preview::{preview_size, scale_frame_to_rgba};
@@ -125,6 +126,37 @@ fn show_roller(ui: &Ui, client: Option<Arc<Client>>, on: bool, speed: u32) {
     ui.speed.set_sensitive(client.is_some());
     ui.syncing.set(false);
     *ui.client.borrow_mut() = client;
+}
+
+/// A section heading.
+fn section(title: &str) -> Label {
+    Label::builder().label(format!("<b>{title}</b>")).use_markup(true).xalign(0.0).build()
+}
+
+/// A grid whose first column holds labels and whose second holds controls.
+fn form() -> Grid {
+    let grid = Grid::new();
+    grid.set_row_spacing(10);
+    grid.set_column_spacing(16);
+    grid
+}
+
+/// Adds a labelled control as row `row` of a form.
+fn add_row(grid: &Grid, row: i32, label: &str, control: &impl IsA<gtk4::Widget>) {
+    grid.attach(&Label::builder().label(label).xalign(0.0).width_chars(15).build(), 0, row, 1, 1);
+    grid.attach(control, 1, row, 1, 1);
+}
+
+/// A slider that fills the row and shows its value.
+fn slider(min: f64, max: f64) -> Scale {
+    let scale = Scale::with_range(Orientation::Horizontal, min, max, 1.0);
+    scale.set_digits(0);
+    scale.set_draw_value(true);
+    scale.set_value_pos(gtk4::PositionType::Right);
+    scale.set_hexpand(true);
+    scale.set_size_request(240, -1);
+    scale.set_sensitive(false);
+    scale
 }
 
 const LIGHT_DELAY: Duration = Duration::from_millis(80);
@@ -296,68 +328,58 @@ pub fn build(app: &Application) {
         ticking: false,
     }));
 
-    let radios = GtkBox::new(Orientation::Vertical, 6);
-    let list = GtkBox::new(Orientation::Vertical, 6);
-    list.append(&Label::builder().label("Display").xalign(0.0).css_classes(["heading"]).build());
-    list.append(&radios);
+    // The scene choices, with the preview in a frame beside them.
+    let radios = GtkBox::new(Orientation::Vertical, 8);
+    let preview_frame = BorderFrame::new(None);
+    preview_frame.set_child(Some(&picture));
+    preview_frame.set_valign(Align::Start);
+    let display_row = GtkBox::new(Orientation::Horizontal, 24);
+    display_row.append(&radios);
+    display_row.append(&preview_frame);
 
-    let status = Label::builder().xalign(0.0).hexpand(true).build();
+    let roller = CheckButton::with_label("Scroll the window with the roller");
+    roller.set_tooltip_text(Some("Turn the roller into a mouse wheel instead of changing the volume"));
+    roller.set_sensitive(false);
+    let speed = slider(1.0, 10.0);
+    speed.set_tooltip_text(Some("How far one click of the roller scrolls"));
+    let roller_grid = form();
+    roller_grid.attach(&roller, 0, 0, 2, 1);
+    add_row(&roller_grid, 1, "Speed", &speed);
+
+    let light_scheme = DropDown::new(None::<StringList>, gtk4::Expression::NONE);
+    light_scheme.set_halign(Align::Start);
+    light_scheme.set_sensitive(false);
+    let light_intensity = slider(0.0, 100.0);
+    let light_colour = ColorDialogButton::new(Some(ColorDialog::new()));
+    light_colour.set_halign(Align::Start);
+    light_colour.set_sensitive(false);
+    let light_speed = slider(1.0, 10.0);
+    let lighting_grid = form();
+    add_row(&lighting_grid, 0, "Scheme", &light_scheme);
+    add_row(&lighting_grid, 1, "Intensity", &light_intensity);
+    add_row(&lighting_grid, 2, "Colour", &light_colour);
+    add_row(&lighting_grid, 3, "Breathing speed", &light_speed);
+
+    let status = Label::builder().xalign(0.0).hexpand(true).wrap(true).css_classes(["dim-label"]).build();
     let retry = Button::with_label("Retry");
     retry.set_visible(false);
     let status_row = GtkBox::new(Orientation::Horizontal, 12);
     status_row.append(&status);
     status_row.append(&retry);
 
-    let roller = CheckButton::with_label("Roller scrolls the window");
-    roller.set_tooltip_text(Some("Turn the roller into a mouse wheel instead of changing the volume"));
-    roller.set_sensitive(false);
-    list.append(&roller);
-    let speed = Scale::with_range(Orientation::Horizontal, 1.0, 10.0, 1.0);
-    speed.set_digits(0);
-    speed.set_draw_value(true);
-    speed.set_sensitive(false);
-    speed.set_tooltip_text(Some("How far one click of the roller scrolls"));
-    list.append(&Label::builder().label("Scroll speed").xalign(0.0).build());
-    list.append(&speed);
-
-    let light_scheme = DropDown::new(None::<StringList>, gtk4::Expression::NONE);
-    light_scheme.set_sensitive(false);
-    let light_intensity = Scale::with_range(Orientation::Horizontal, 0.0, 100.0, 1.0);
-    light_intensity.set_digits(0);
-    light_intensity.set_draw_value(true);
-    light_intensity.set_hexpand(true);
-    light_intensity.set_sensitive(false);
-    let light_colour = ColorDialogButton::new(Some(ColorDialog::new()));
-    light_colour.set_sensitive(false);
-    let light_speed = Scale::with_range(Orientation::Horizontal, 1.0, 10.0, 1.0);
-    light_speed.set_digits(0);
-    light_speed.set_draw_value(true);
-    light_speed.set_hexpand(true);
-    light_speed.set_sensitive(false);
-    let lighting = GtkBox::new(Orientation::Vertical, 6);
-    lighting.append(&Label::builder().label("Key lighting").xalign(0.0).css_classes(["heading"]).build());
-    for (label, widget) in [
-        ("Scheme", light_scheme.clone().upcast::<gtk4::Widget>()),
-        ("Intensity", light_intensity.clone().upcast()),
-        ("Colour", light_colour.clone().upcast()),
-        ("Breathing speed", light_speed.clone().upcast()),
-    ] {
-        let line = GtkBox::new(Orientation::Horizontal, 12);
-        line.append(&Label::builder().label(label).xalign(0.0).width_chars(14).build());
-        line.append(&widget);
-        lighting.append(&line);
-    }
-
-    let row = GtkBox::new(Orientation::Horizontal, 24);
-    row.append(&list);
-    row.append(&picture);
-    let content = GtkBox::new(Orientation::Vertical, 12);
-    content.set_margin_top(16);
-    content.set_margin_bottom(16);
-    content.set_margin_start(16);
-    content.set_margin_end(16);
-    content.append(&row);
-    content.append(&lighting);
+    let content = GtkBox::new(Orientation::Vertical, 14);
+    content.set_margin_top(20);
+    content.set_margin_bottom(20);
+    content.set_margin_start(24);
+    content.set_margin_end(24);
+    content.append(&section("Display"));
+    content.append(&display_row);
+    content.append(&Separator::new(Orientation::Horizontal));
+    content.append(&section("Roller"));
+    content.append(&roller_grid);
+    content.append(&Separator::new(Orientation::Horizontal));
+    content.append(&section("Key lighting"));
+    content.append(&lighting_grid);
     content.append(&status_row);
 
     ApplicationWindow::builder()
