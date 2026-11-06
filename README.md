@@ -7,87 +7,117 @@ log in to your desktop and lets you configure your keyboard without Windows.
 The first target device is the **Apex Pro TKL** with its OLED display.
 
 > Keysteel is an independent project. It is not affiliated with, endorsed by
-> or supported by SteelSeries. SteelSeries and Apex are trademarks of their
-> respective owners.
+> or supported by SteelSeries or Nintendo. SteelSeries and Apex are
+> trademarks of SteelSeries. Super Mario is a character of Nintendo; the
+> Mario scene is a fan tribute. The Adeptum logo belongs to Adeptum AB.
 
 ## What it does
 
-- Shows scenes on the OLED display of the Apex Pro TKL Gen 3: an Amiga
-  Boing ball and Super Mario running, jumping over pipes and onto brick
-  platforms in a level that never repeats, and the Adeptum logo scrolling
-  across the screen. "Off" gives the
-  screen back to the keyboard's own display.
-- Turns the roller in the corner into a mouse wheel, with a speed you can
-  set.
+- Shows scenes on the OLED display: an Amiga Boing ball, Super Mario
+  running and jumping over pipes and onto brick platforms in a level that
+  never repeats, and the Adeptum logo scrolling across the screen. "Off"
+  gives the screen back to the keyboard's own display.
 - Lights the keys from presets: a very faint warm yellow sheen, one solid
   colour, a slow breathing, all dark, or the keyboard's own scheme. The
   intensity, colour and breathing speed are adjustable.
-- Picks the scene, the lighting and the roller settings from a small
-  desktop app.
+- Turns the roller in the corner into a mouse wheel, with a speed you can
+  set.
+- Picks all of this from a small desktop app.
 
-## How it is built
+## Supported
 
-- Written in Rust.
-- A **background daemon** owns the keyboard. It draws the scenes, handles
-  the roller and offers a D-Bus service, `org.keysteel.Daemon`, on the
-  session bus. It starts at login as a systemd user service, or on demand
-  through D-Bus activation, and sleeps when nothing is animating.
-- A **desktop app** (GTK 4), started from the application menu, talks to
-  the daemon over D-Bus. It has no tray icon.
-- A udev rule lets your user use the keyboard without root.
-- Primary desktop target: Linux Mint (Cinnamon).
+- Keyboard: the **SteelSeries Apex Pro TKL Gen 3** (USB `1038:1642`) over
+  USB. It is tested on the ISO layout only. Other keyboards, the wireless
+  models and the ANSI layout are untested.
+- System: Linux Mint 22 or Ubuntu 24.04 and newer on amd64. The app needs
+  GTK 4.10, which older releases do not have.
 
-## Building
+## Installing
 
-You need a recent stable Rust toolchain, plus the development files for
-libudev and (for the app) GTK 4.10 or newer.
+Download the `.deb` from the
+[releases page](https://github.com/adeptum-labs/keysteel/releases) and install
+it:
 
 ```
-packaging/install.sh
+sudo apt install ./keysteel_0.1.0-1_amd64.deb
 ```
 
-The script installs the daemon for your user and starts it as a systemd user
-service. It installs the app too when the GTK 4 development files are found,
-and then prints the one command that needs root: installing the udev rule that
-lets your user talk to the keyboard.
+Unplug the keyboard and plug it in again (or log out and in) so the new
+permissions apply. The daemon starts at every login. Start **Keysteel** from
+the application menu. Remove it with `sudo apt remove keysteel`.
 
-Start Keysteel from the application menu and pick a scene in the window. The
+## Using it
+
+Pick a scene, a lighting preset and the roller setting in the window. The
 daemon has to be running; the window says so and offers Retry if it is not.
-You can also pick a scene from a terminal:
+
+Everything can also be set from a terminal, through the daemon's D-Bus
+service on the session bus:
 
 ```
 busctl --user call org.keysteel.Daemon /org/keysteel/Daemon \
     org.keysteel.Daemon SetScene s boing
 ```
 
-The lighting is set the same way. The arguments are the scheme (`warm`,
-`solid`, `breathing`, `off` or `default`), the intensity from 0 to 100, red,
-green and blue, and the breathing speed from 1 to 10:
+The scene ids are `off`, `boing`, `mario` and `adeptum`.
+
+The lighting arguments are the scheme (`warm`, `solid`, `breathing`, `off` or
+`default`), the intensity from 0 to 100, red, green and blue, and the
+breathing speed from 1 to 10:
 
 ```
 busctl --user call org.keysteel.Daemon /org/keysteel/Daemon \
     org.keysteel.Daemon SetLighting syyyyy warm 30 255 255 255 4
 ```
 
-The lighting stays on while the daemon runs; stop the daemon and the
-keyboard goes back to its own lighting.
+The lighting stays on while the daemon runs. Stop the daemon and the keyboard
+goes back to its own lighting.
 
-The scene ids are `off`, `boing`, `mario` and `adeptum`. `off` gives the screen back to
-the keyboard's own display.
-
-The roller in the corner of the keyboard changes the volume. Tick "Roller
-scrolls the window" in the app to make it scroll like a mouse wheel
-instead, or run `busctl --user call org.keysteel.Daemon
-/org/keysteel/Daemon org.keysteel.Daemon SetRollerScroll b true`. The
-scroll speed slider sets how far one click goes (1 to 10 notches, 3 by
-default; `SetRollerSpeed u 5`). Both settings are remembered. It needs
-the same udev rule as the display, which also lets your user open the
-keyboard's media key device and `/dev/uinput`.
+The roller changes the volume until you tick "Scroll the window with the
+roller" in the app, or run `SetRollerScroll b true`. The speed (1 to 10
+notches per click, 3 by default) is `SetRollerSpeed u 5`. The scene, the
+lighting and the roller settings are all remembered.
 
 By default the keyboard draws its own status text over the top 12 rows of
 the OLED. Turn off "display icons" in the keyboard's OLED menu to use the
 whole 128x40 screen. Keysteel cannot change that option: it is only
 available from the keyboard.
+
+## Permissions
+
+The package installs a udev rule that gives the logged-in user access to
+the keyboard's control interface, to its media key input device (which the
+roller uses) and to `/dev/uinput` (to create the virtual mouse wheel). The
+typing keys are not opened. Note that access to `/dev/uinput` lets any
+program you run create virtual input devices.
+
+## Building from source
+
+You need a recent stable Rust toolchain, plus the development files for
+libudev and GTK 4.10 or newer (`libudev-dev` and `libgtk-4-dev` on Debian
+and Ubuntu).
+
+```
+packaging/install.sh
+```
+
+The script installs the daemon for your user, starts it as a systemd user
+service, and installs the app when the GTK 4 development files are found. It
+then prints the one command that needs root: installing the udev rule.
+
+To build the `.deb` yourself, install `cargo-deb` and run
+`packaging/deb/stage.sh`.
+
+## How it is built
+
+- Written in Rust.
+- A **background daemon** owns the keyboard. It draws the scenes, applies
+  the lighting, handles the roller and offers the D-Bus service
+  `org.keysteel.Daemon`. It starts at login as a systemd user service, or on
+  demand through D-Bus activation, and sleeps when nothing is animating.
+- A **desktop app** (GTK 4), started from the application menu, talks to
+  the daemon over D-Bus. It has no tray icon.
+- Primary desktop target: Linux Mint (Cinnamon).
 
 ## License
 
