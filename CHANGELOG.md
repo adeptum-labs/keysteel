@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1
+
+- Fixed the key lighting stopping after a replug or after the keyboard
+  refused a report. Reports to the keyboard now take turns and are tried
+  again, the display and the lighting are reattached separately, and
+  changing a setting picks up a keyboard that was dropped.
+- The warm sheen is now a more amber colour.
+- Source files carry licence headers.
+
 ## 0.1.0
 
 First release, for the Apex Pro TKL Gen 3 over USB.

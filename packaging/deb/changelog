@@ -1,3 +1,10 @@
+keysteel (0.1.1-1) unstable; urgency=low
+
+  * Fix the key lighting stopping after a replug or a refused report.
+  * Make the warm sheen more amber.
+
+ -- Adam Waldenberg <adam@adeptum.se>  Fri, 06 Nov 2026 09:19:45 +0100
+
 keysteel (0.1.0-1) unstable; urgency=low
 
   * First release.
