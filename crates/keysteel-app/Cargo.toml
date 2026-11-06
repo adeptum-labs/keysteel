@@ -5,6 +5,6 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-gtk4 = "0.11.5"
+gtk4 = { version = "0.11.5", features = ["v4_10"] }
 keysteel-core = { path = "../keysteel-core" }
 zbus = "5"
