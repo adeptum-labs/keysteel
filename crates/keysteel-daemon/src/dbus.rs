@@ -23,6 +23,7 @@ use crate::scroll::Roller;
 use keysteel_core::lighting::{all_light_schemes, LightParams, Rgb};
 use keysteel_core::scene::all_scenes;
 use keysteel_daemon::state;
+use keysteel_hid::{HidrawDevice, HidrawLights};
 use std::sync::Arc;
 use std::time::Instant;
 use zbus::{fdo, interface};
@@ -49,6 +50,13 @@ impl Service {
     fn set_scene(&self, id: &str) -> fdo::Result<()> {
         {
             let mut inner = self.shared.lock();
+            // A keyboard dropped after a failed write is picked up again here,
+            // so changing the setting is also the way to get it back.
+            if inner.engine.device().is_none() {
+                if let Ok(device) = HidrawDevice::open() {
+                    inner.engine.set_device(Some(device));
+                }
+            }
             inner
                 .engine
                 .set_scene(id)
@@ -90,6 +98,11 @@ impl Service {
         let params = LightParams { intensity, colour: Rgb::new(red, green, blue), speed };
         {
             let mut inner = self.lights.lock();
+            if inner.engine.lights().is_none() {
+                if let Ok(handle) = HidrawLights::open() {
+                    inner.engine.set_device(Some(handle));
+                }
+            }
             inner
                 .engine
                 .set(scheme, params)
