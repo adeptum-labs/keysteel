@@ -1,3 +1,4 @@
+use keysteel_core::lighting::{light_scheme_by_id, LightParams, Rgb};
 use keysteel_core::scene::scene_by_id;
 use std::path::{Path, PathBuf};
 
@@ -15,6 +16,53 @@ fn state_dir() -> Option<PathBuf> {
 /// Where the chosen scene is kept.
 pub fn default_path() -> Option<PathBuf> {
     state_dir().map(|dir| dir.join("scene"))
+}
+
+/// Where the lighting setting is kept.
+pub fn lighting_path() -> Option<PathBuf> {
+    state_dir().map(|dir| dir.join("lighting"))
+}
+
+const DEFAULT_LIGHT_SCHEME: &str = "default";
+
+/// Reads the saved lighting as scheme id and settings. A missing, unreadable
+/// or unknown value gives the keyboard's own lighting with default settings.
+pub fn load_lighting(path: &Path) -> (String, LightParams) {
+    let fallback = (DEFAULT_LIGHT_SCHEME.to_string(), LightParams::default());
+    let Ok(text) = std::fs::read_to_string(path) else {
+        return fallback;
+    };
+    let mut fields = text.split_whitespace();
+    let (Some(id), Some(intensity), Some(colour), Some(speed)) =
+        (fields.next(), fields.next(), fields.next(), fields.next())
+    else {
+        return fallback;
+    };
+    let parsed = (
+        intensity.parse::<u8>(),
+        u32::from_str_radix(colour, 16),
+        speed.parse::<u8>(),
+    );
+    match parsed {
+        (Ok(intensity), Ok(rgb), Ok(speed)) if colour.len() == 6 && light_scheme_by_id(id).is_some() => (
+            id.to_string(),
+            LightParams {
+                intensity,
+                colour: Rgb::new((rgb >> 16) as u8, (rgb >> 8) as u8, rgb as u8),
+                speed,
+            }
+            .clamped(),
+        ),
+        _ => fallback,
+    }
+}
+
+pub fn save_lighting(path: &Path, id: &str, params: &LightParams) -> std::io::Result<()> {
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    let c = params.colour;
+    std::fs::write(path, format!("{id} {} {:02x}{:02x}{:02x} {}", params.intensity, c.r, c.g, c.b, params.speed))
 }
 
 /// Where the roller setting is kept.
@@ -161,5 +209,39 @@ mod tests {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(&path, "fast").unwrap();
         assert_eq!(load_speed(&path), 3);
+    }
+
+    #[test]
+    fn lighting_defaults_to_the_keyboards_own() {
+        let (id, params) = load_lighting(&temp_path("light-missing"));
+        assert_eq!(id, "default");
+        assert_eq!(params, LightParams::default());
+    }
+
+    #[test]
+    fn lighting_roundtrips() {
+        let path = temp_path("light");
+        let params = LightParams { intensity: 42, colour: Rgb::new(255, 214, 140), speed: 7 };
+        save_lighting(&path, "breathing", &params).unwrap();
+        assert_eq!(load_lighting(&path), ("breathing".to_string(), params));
+    }
+
+    #[test]
+    fn lighting_garbage_gives_the_default() {
+        for text in ["", "warm", "nope 30 ffffff 4", "warm x ffffff 4", "warm 30 zzzzzz 4", "warm 30 fff 4"] {
+            let path = temp_path("light-garbage");
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, text).unwrap();
+            assert_eq!(load_lighting(&path).0, "default", "for {text:?}");
+        }
+    }
+
+    #[test]
+    fn lighting_out_of_range_values_are_clamped() {
+        let path = temp_path("light-range");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "warm 250 ffffff 99").unwrap();
+        let (_, params) = load_lighting(&path);
+        assert_eq!((params.intensity, params.speed), (100, 10));
     }
 }
