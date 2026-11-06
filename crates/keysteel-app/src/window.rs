@@ -1,7 +1,7 @@
 use gtk4::prelude::*;
 use gtk4::{
     gdk, gio, glib, Application, ApplicationWindow, Box as GtkBox, Button, CheckButton, Label,
-    Orientation, Picture,
+    Orientation, Picture, Scale,
 };
 use keysteel_app::client::{Client, ClientError};
 use keysteel_app::preview::{preview_size, scale_frame_to_rgba};
@@ -74,6 +74,7 @@ struct Connected {
     scenes: Vec<(String, String)>,
     current: String,
     roller: bool,
+    speed: u32,
 }
 
 fn connect_blocking() -> Result<Connected, ClientError> {
@@ -81,7 +82,8 @@ fn connect_blocking() -> Result<Connected, ClientError> {
     let scenes = client.list_scenes()?;
     let current = client.current()?;
     let roller = client.roller_scroll()?;
-    Ok(Connected { client, scenes, current, roller })
+    let speed = client.roller_speed()?;
+    Ok(Connected { client, scenes, current, roller, speed })
 }
 
 fn local_scenes() -> Vec<(String, String)> {
@@ -95,6 +97,7 @@ struct Ui {
     retry: Button,
     preview: Rc<RefCell<Preview>>,
     roller: CheckButton,
+    speed: Scale,
     /// The daemon connection, once there is one.
     client: RefCell<Option<Arc<Client>>>,
     /// True while the tick is set from the daemon's answer, so that does not
@@ -103,10 +106,12 @@ struct Ui {
 }
 
 /// Shows the daemon's roller setting, or disables the tick without one.
-fn show_roller(ui: &Ui, client: Option<Arc<Client>>, on: bool) {
+fn show_roller(ui: &Ui, client: Option<Arc<Client>>, on: bool, speed: u32) {
     ui.syncing.set(true);
     ui.roller.set_active(on);
     ui.roller.set_sensitive(client.is_some());
+    ui.speed.set_value(speed as f64);
+    ui.speed.set_sensitive(client.is_some());
     ui.syncing.set(false);
     *ui.client.borrow_mut() = client;
 }
@@ -166,7 +171,7 @@ fn connect(ui: Rc<Ui>) {
             Ok(Ok(connected)) => {
                 ui.status.set_text("");
                 let client = Some(Arc::new(connected.client));
-                show_roller(&ui, client.clone(), connected.roller);
+                show_roller(&ui, client.clone(), connected.roller, connected.speed);
                 populate(&ui, client, &connected.scenes, &connected.current);
             }
             failure => {
@@ -175,7 +180,7 @@ fn connect(ui: Rc<Ui>) {
                     _ => "could not reach the daemon".to_string(),
                 };
                 ui.status.set_text(&message);
-                show_roller(&ui, None, false);
+                show_roller(&ui, None, false, 3);
                 populate(&ui, None, &local_scenes(), "off");
                 ui.retry.set_visible(true);
             }
@@ -217,6 +222,13 @@ pub fn build(app: &Application) {
     roller.set_tooltip_text(Some("Turn the roller into a mouse wheel instead of changing the volume"));
     roller.set_sensitive(false);
     list.append(&roller);
+    let speed = Scale::with_range(Orientation::Horizontal, 1.0, 10.0, 1.0);
+    speed.set_digits(0);
+    speed.set_draw_value(true);
+    speed.set_sensitive(false);
+    speed.set_tooltip_text(Some("How far one click of the roller scrolls"));
+    list.append(&Label::builder().label("Scroll speed").xalign(0.0).build());
+    list.append(&speed);
 
     let row = GtkBox::new(Orientation::Horizontal, 24);
     row.append(&list);
@@ -242,9 +254,30 @@ pub fn build(app: &Application) {
         retry: retry.clone(),
         preview,
         roller: roller.clone(),
+        speed: speed.clone(),
         client: RefCell::new(None),
         syncing: Cell::new(false),
     });
+    {
+        let ui = ui.clone();
+        speed.connect_value_changed(move |scale| {
+            if ui.syncing.get() {
+                return;
+            }
+            let Some(client) = ui.client.borrow().clone() else {
+                return;
+            };
+            let value = scale.value().round() as u32;
+            let status = ui.status.clone();
+            glib::spawn_future_local(async move {
+                match gio::spawn_blocking(move || client.set_roller_speed(value)).await {
+                    Ok(Ok(())) => status.set_text(""),
+                    Ok(Err(error)) => status.set_text(&error.to_string()),
+                    Err(_) => status.set_text("scroll speed failed"),
+                }
+            });
+        });
+    }
     {
         let ui = ui.clone();
         roller.connect_toggled(move |button| {
