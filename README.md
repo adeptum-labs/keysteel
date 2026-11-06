@@ -26,6 +26,12 @@ The first target device is the **Apex Pro TKL** with its OLED display.
   set.
 - Picks all of this from a small desktop app.
 
+## See it
+
+[![The Boing ball on the keyboard's OLED, with the keys in a warm amber sheen](docs/demo-poster.jpg)](docs/demo.mp4)
+
+Click the picture to play the video (no sound).
+
 ## Supported
 
 - Keyboard: the **SteelSeries Apex Pro TKL Gen 3** (USB `1038:1642`) over
