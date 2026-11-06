@@ -22,6 +22,36 @@ pub fn roller_path() -> Option<PathBuf> {
     state_dir().map(|dir| dir.join("roller"))
 }
 
+pub const MIN_SPEED: u32 = 1;
+pub const MAX_SPEED: u32 = 10;
+pub const DEFAULT_SPEED: u32 = 3;
+
+/// Keeps a roller speed (wheel notches per click) in the allowed range.
+pub fn clamp_speed(speed: u32) -> u32 {
+    speed.clamp(MIN_SPEED, MAX_SPEED)
+}
+
+/// Where the roller speed is kept.
+pub fn speed_path() -> Option<PathBuf> {
+    state_dir().map(|dir| dir.join("roller-speed"))
+}
+
+/// Reads the roller speed; a missing or unreadable value gives the default.
+pub fn load_speed(path: &Path) -> u32 {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|text| text.trim().parse().ok())
+        .map(clamp_speed)
+        .unwrap_or(DEFAULT_SPEED)
+}
+
+pub fn save_speed(path: &Path, speed: u32) -> std::io::Result<()> {
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    std::fs::write(path, speed.to_string())
+}
+
 /// Reads the roller setting; a missing or unreadable file means off.
 pub fn load_roller(path: &Path) -> bool {
     std::fs::read_to_string(path).map(|text| text.trim() == "on").unwrap_or(false)
@@ -101,5 +131,35 @@ mod tests {
         assert!(load_roller(&path));
         save_roller(&path, false).unwrap();
         assert!(!load_roller(&path));
+    }
+
+    #[test]
+    fn speed_defaults_to_three() {
+        assert_eq!(load_speed(&temp_path("speed-missing")), 3);
+    }
+
+    #[test]
+    fn speed_roundtrips() {
+        let path = temp_path("speed");
+        save_speed(&path, 7).unwrap();
+        assert_eq!(load_speed(&path), 7);
+    }
+
+    #[test]
+    fn speed_is_kept_in_range() {
+        assert_eq!(clamp_speed(0), 1);
+        assert_eq!(clamp_speed(99), 10);
+        assert_eq!(clamp_speed(5), 5);
+        let path = temp_path("speed-big");
+        save_speed(&path, 500).unwrap();
+        assert_eq!(load_speed(&path), 10);
+    }
+
+    #[test]
+    fn speed_garbage_is_the_default() {
+        let path = temp_path("speed-garbage");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "fast").unwrap();
+        assert_eq!(load_speed(&path), 3);
     }
 }
