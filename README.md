@@ -1,12 +1,12 @@
 # Keysteel
 
+<img src="docs/screenshot.png" align="right" width="300" alt="The Keysteel app: display scene, roller and key lighting settings">
+
 An unofficial Linux companion for SteelSeries keyboards, in the spirit of
 SteelSeries GG. Keysteel runs quietly in the background from the moment you
 log in to your desktop and lets you configure your keyboard without Windows.
 
 The first target device is the **Apex Pro TKL** with its OLED display.
-
-![The Keysteel app: display scene, roller and key lighting settings](docs/screenshot.png)
 
 > Keysteel is an independent project. It is not affiliated with, endorsed by
 > or supported by SteelSeries or Nintendo. SteelSeries and Apex are
