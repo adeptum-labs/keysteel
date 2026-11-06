@@ -16,6 +16,8 @@ const CHECK_EVERY: Duration = Duration::from_millis(200);
 const RETRY_AFTER: Duration = Duration::from_secs(2);
 /// One notch of a wheel in the high resolution units the kernel uses.
 const HI_RES_NOTCH: i32 = 120;
+/// Wheel notches for each click of the roller; one felt too slow.
+const NOTCHES_PER_CLICK: i32 = 3;
 
 /// The on/off switch shared by the D-Bus service and the worker thread.
 pub struct Roller {
@@ -122,7 +124,8 @@ fn forward(roller: &Roller) -> io::Result<()> {
                     match map(event.event_type().0, event.code(), event.value()) {
                         Mapped::Pass if event.event_type() == EventType::KEY => out.push(event),
                         Mapped::Pass | Mapped::Swallow => {}
-                        Mapped::Wheel(notches) => {
+                        Mapped::Wheel(clicks) => {
+                            let notches = clicks * NOTCHES_PER_CLICK;
                             let rel = EventType::RELATIVE.0;
                             out.push(InputEvent::new(rel, RelativeAxisCode::REL_WHEEL_HI_RES.0, notches * HI_RES_NOTCH));
                             out.push(InputEvent::new(rel, RelativeAxisCode::REL_WHEEL.0, notches));
