@@ -6,6 +6,8 @@ use evdev::{AttributeSet, Device, EventType, InputEvent, RelativeAxisCode};
 use keysteel_daemon::roller::{map, Mapped};
 use std::io;
 use std::os::fd::AsRawFd;
+use keysteel_daemon::state::clamp_speed;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Condvar, Mutex};
 use std::time::Duration;
 
@@ -16,18 +18,26 @@ const CHECK_EVERY: Duration = Duration::from_millis(200);
 const RETRY_AFTER: Duration = Duration::from_secs(2);
 /// One notch of a wheel in the high resolution units the kernel uses.
 const HI_RES_NOTCH: i32 = 120;
-/// Wheel notches for each click of the roller; one felt too slow.
-const NOTCHES_PER_CLICK: i32 = 3;
 
 /// The on/off switch shared by the D-Bus service and the worker thread.
 pub struct Roller {
     on: Mutex<bool>,
     changed: Condvar,
+    /// Wheel notches for each click of the roller.
+    speed: AtomicU32,
 }
 
 impl Roller {
-    pub fn new(on: bool) -> Roller {
-        Roller { on: Mutex::new(on), changed: Condvar::new() }
+    pub fn new(on: bool, speed: u32) -> Roller {
+        Roller { on: Mutex::new(on), changed: Condvar::new(), speed: AtomicU32::new(clamp_speed(speed)) }
+    }
+
+    pub fn speed(&self) -> u32 {
+        self.speed.load(Ordering::Relaxed)
+    }
+
+    pub fn set_speed(&self, speed: u32) {
+        self.speed.store(clamp_speed(speed), Ordering::Relaxed);
     }
 
     pub fn get(&self) -> bool {
@@ -125,7 +135,7 @@ fn forward(roller: &Roller) -> io::Result<()> {
                         Mapped::Pass if event.event_type() == EventType::KEY => out.push(event),
                         Mapped::Pass | Mapped::Swallow => {}
                         Mapped::Wheel(clicks) => {
-                            let notches = clicks * NOTCHES_PER_CLICK;
+                            let notches = clicks * roller.speed() as i32;
                             let rel = EventType::RELATIVE.0;
                             out.push(InputEvent::new(rel, RelativeAxisCode::REL_WHEEL_HI_RES.0, notches * HI_RES_NOTCH));
                             out.push(InputEvent::new(rel, RelativeAxisCode::REL_WHEEL.0, notches));

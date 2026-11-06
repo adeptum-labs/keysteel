@@ -61,4 +61,18 @@ impl Service {
             }
         }
     }
+
+    /// Wheel notches for each click of the roller, from 1 to 10.
+    fn get_roller_speed(&self) -> u32 {
+        self.roller.speed()
+    }
+
+    fn set_roller_speed(&self, speed: u32) {
+        self.roller.set_speed(speed);
+        if let Some(path) = state::speed_path() {
+            if let Err(e) = state::save_speed(&path, self.roller.speed()) {
+                eprintln!("cannot save roller speed: {e}");
+            }
+        }
+    }
 }

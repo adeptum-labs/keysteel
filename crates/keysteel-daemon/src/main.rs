@@ -18,7 +18,10 @@ fn main() {
     // copy started by hand fails before it can touch the display.
     let shared = Arc::new(Shared::new(Engine::<HidrawDevice>::new(None, &scene)));
 
-    let roller = Arc::new(Roller::new(state::roller_path().map(|p| state::load_roller(&p)).unwrap_or(false)));
+    let roller = Arc::new(Roller::new(
+        state::roller_path().map(|p| state::load_roller(&p)).unwrap_or(false),
+        state::speed_path().map(|p| state::load_speed(&p)).unwrap_or(state::DEFAULT_SPEED),
+    ));
 
     let connection = match connection::Builder::session()
         .and_then(|b| b.serve_at(dbus::OBJECT_PATH, dbus::Service { shared: shared.clone(), roller: roller.clone() }))
