@@ -40,4 +40,5 @@ assets = [
     ["../../target/deb-stage/keysteel.desktop", "usr/share/applications/", "644"],
     ["../../README.md", "usr/share/doc/keysteel/", "644"],
     ["../../CHANGELOG.md", "usr/share/doc/keysteel/", "644"],
+    ["../../LICENSE", "usr/share/doc/keysteel/", "644"],
 ]
