@@ -101,7 +101,10 @@ impl<L: KeyLights> LightEngine<L> {
         };
         match result {
             Ok(()) => self.shown = Some(wanted),
-            Err(_) => self.lights = None,
+            Err(e) => {
+                eprintln!("lighting write failed, dropping the keyboard: {e}");
+                self.lights = None;
+            }
         }
     }
 }

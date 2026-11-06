@@ -87,7 +87,8 @@ impl<D: Device> Engine<D> {
         } else {
             device.reset()
         };
-        if result.is_err() {
+        if let Err(e) = result {
+            eprintln!("display write failed, dropping the keyboard: {e}");
             self.device = None;
         }
     }
