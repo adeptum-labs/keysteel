@@ -1,0 +1,112 @@
+use crate::frame::{Frame, HEIGHT, WIDTH};
+use crate::scene::Scene;
+use crate::scenes::sprite::{parse_sprite_frames, SpriteFrame};
+use std::time::Duration;
+
+const PIXELS_PER_SEC: f64 = 40.0;
+
+/// The Adeptum logo scrolling across the display, right to left.
+pub struct Adeptum {
+    logo: SpriteFrame,
+}
+
+impl Adeptum {
+    pub fn new() -> Adeptum {
+        let logo = parse_sprite_frames(include_str!("../../assets/adeptum.txt"))
+            .into_iter()
+            .next()
+            .expect("the logo asset holds one picture");
+        Adeptum { logo }
+    }
+}
+
+impl Default for Adeptum {
+    fn default() -> Adeptum {
+        Adeptum::new()
+    }
+}
+
+impl Scene for Adeptum {
+    fn id(&self) -> &'static str {
+        "adeptum"
+    }
+
+    fn name(&self) -> &'static str {
+        "Adeptum logo"
+    }
+
+    fn animated(&self) -> bool {
+        true
+    }
+
+    fn render(&mut self, elapsed: Duration, frame: &mut Frame) {
+        frame.clear();
+        // From just off the right edge to just off the left one, then again.
+        // f64 keeps the position exact after days of uptime.
+        let lap = (WIDTH + self.logo.width) as u64;
+        let travelled = (elapsed.as_secs_f64() * PIXELS_PER_SEC) as u64 % lap;
+        let left = WIDTH as i32 - travelled as i32;
+        let top = (HEIGHT as i32 - self.logo.height as i32) / 2;
+        for y in 0..self.logo.height {
+            for x in 0..self.logo.width {
+                if self.logo.get(x, y) {
+                    frame.set_pixel(left + x as i32, top + y as i32, true);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn render_at(ms: u64) -> Frame {
+        let mut frame = Frame::new();
+        Adeptum::new().render(Duration::from_millis(ms), &mut frame);
+        frame
+    }
+
+    fn lit(frame: &Frame) -> usize {
+        (0..HEIGHT)
+            .flat_map(|y| (0..WIDTH).map(move |x| (x, y)))
+            .filter(|&(x, y)| frame.get_pixel(x, y))
+            .count()
+    }
+
+    #[test]
+    fn the_logo_fits_the_screen_height() {
+        assert!(Adeptum::new().logo.height <= HEIGHT);
+    }
+
+    #[test]
+    fn the_logo_starts_off_screen_and_enters_from_the_right() {
+        assert_eq!(lit(&render_at(0)), 0);
+        assert!(lit(&render_at(500)) > 0);
+    }
+
+    #[test]
+    fn the_logo_moves() {
+        assert_ne!(render_at(1000), render_at(1100));
+    }
+
+    #[test]
+    fn the_whole_logo_is_on_screen_at_some_point() {
+        // It is a little narrower than the screen, so for an instant all of it shows.
+        let total = Adeptum::new().logo.pixels.iter().filter(|p| **p).count();
+        assert!((0..8000).step_by(5).any(|ms| lit(&render_at(ms)) == total));
+    }
+
+    #[test]
+    fn the_scroll_repeats() {
+        // The logo moves 40 pixels a second, so a pixel takes 25 ms.
+        let lap_ms = (WIDTH + Adeptum::new().logo.width) as u64 * 25;
+        assert_eq!(render_at(2000), render_at(2000 + lap_ms * 40));
+    }
+
+    #[test]
+    fn the_logo_still_moves_after_30_days_of_uptime() {
+        let thirty_days = 30 * 24 * 3600 * 1000;
+        assert_ne!(render_at(thirty_days + 1000), render_at(thirty_days + 1100));
+    }
+}
