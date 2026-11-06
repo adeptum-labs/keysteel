@@ -69,6 +69,15 @@ impl Client {
     pub fn set_scene(&self, id: &str) -> Result<(), ClientError> {
         self.proxy.call("SetScene", &(id,)).map_err(map_error)
     }
+
+    /// Whether the roller scrolls the window instead of changing the volume.
+    pub fn roller_scroll(&self) -> Result<bool, ClientError> {
+        self.proxy.call("GetRollerScroll", &()).map_err(map_error)
+    }
+
+    pub fn set_roller_scroll(&self, on: bool) -> Result<(), ClientError> {
+        self.proxy.call("SetRollerScroll", &(on,)).map_err(map_error)
+    }
 }
 
 #[cfg(test)]
