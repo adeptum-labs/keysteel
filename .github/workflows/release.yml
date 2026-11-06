@@ -1,0 +1,65 @@
+name: Release
+
+# Pushing a tag such as v0.1.0 (or v0.1.0-rc1 for a pre-release) builds the
+# .deb package and publishes it on the GitHub releases page.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  deb:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check that the tag matches the crate version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          base="${tag%%-*}"
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -1)
+          if [ "$base" != "$version" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match version $version" >&2
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libgtk-4-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run the tests
+        run: cargo test --workspace --locked
+
+      - name: Build the package
+        run: |
+          cargo install cargo-deb --locked
+          packaging/deb/stage.sh
+
+      - name: Write the release notes and checksum
+        run: |
+          awk -v v="$VERSION" '
+            $0 ~ "^## " v "$" { on = 1; next }
+            /^## / { on = 0 }
+            on
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "No CHANGELOG.md section for $VERSION" >&2
+            exit 1
+          fi
+          cd target/debian
+          sha256sum keysteel_*.deb > SHA256SUMS
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=""
+          case "$GITHUB_REF_NAME" in *-*) flags="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" $flags \
+            --title "Keysteel $GITHUB_REF_NAME" \
+            --notes-file notes.md \
+            target/debian/keysteel_*.deb target/debian/SHA256SUMS
