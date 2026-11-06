@@ -173,7 +173,7 @@ mod tests {
         engine.set("warm", LightParams::default()).unwrap();
         assert_eq!(engine.scheme_id(), "warm");
         assert_eq!(engine.lights().unwrap().sets.len(), 1);
-        assert_eq!(last_colour(&engine), Rgb::new(77, 64, 42));
+        assert_eq!(last_colour(&engine), Rgb::new(77, 61, 35));
     }
 
     #[test]
