@@ -3,6 +3,12 @@ name = "keysteel-hid"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "../../README.md"
+keywords.workspace = true
+description = "Talks to the Apex Pro TKL Gen 3 over hidraw for Keysteel"
 
 [dependencies]
 keysteel-core = { path = "../keysteel-core" }
