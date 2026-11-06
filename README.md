@@ -19,7 +19,11 @@ The first target device is the **Apex Pro TKL** with its OLED display.
   screen back to the keyboard's own display.
 - Turns the roller in the corner into a mouse wheel, with a speed you can
   set.
-- Picks the scene and the roller settings from a small desktop app.
+- Lights the keys from presets: a very faint warm yellow sheen, one solid
+  colour, a slow breathing, all dark, or the keyboard's own scheme. The
+  intensity, colour and breathing speed are adjustable.
+- Picks the scene, the lighting and the roller settings from a small
+  desktop app.
 
 ## How it is built
 
@@ -36,7 +40,7 @@ The first target device is the **Apex Pro TKL** with its OLED display.
 ## Building
 
 You need a recent stable Rust toolchain, plus the development files for
-libudev and (for the app) GTK 4.
+libudev and (for the app) GTK 4.10 or newer.
 
 ```
 packaging/install.sh
@@ -55,6 +59,18 @@ You can also pick a scene from a terminal:
 busctl --user call org.keysteel.Daemon /org/keysteel/Daemon \
     org.keysteel.Daemon SetScene s boing
 ```
+
+The lighting is set the same way. The arguments are the scheme (`warm`,
+`solid`, `breathing`, `off` or `default`), the intensity from 0 to 100, red,
+green and blue, and the breathing speed from 1 to 10:
+
+```
+busctl --user call org.keysteel.Daemon /org/keysteel/Daemon \
+    org.keysteel.Daemon SetLighting syyyyy warm 30 255 255 255 4
+```
+
+The lighting stays on while the daemon runs; stop the daemon and the
+keyboard goes back to its own lighting.
 
 The scene ids are `off`, `boing`, `mario` and `adeptum`. `off` gives the screen back to
 the keyboard's own display.
