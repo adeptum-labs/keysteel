@@ -110,10 +110,11 @@ mod tests {
     }
 
     #[test]
-    fn the_whole_logo_is_on_screen_at_some_point() {
-        // It is a little narrower than the screen, so for an instant all of it shows.
+    fn the_logo_is_wider_than_the_screen_and_scrolls_through_it() {
+        // Too wide to show at once: the icon leaves before the text arrives.
         let total = Adeptum::new().logo.pixels.iter().filter(|p| **p).count();
-        assert!((0..8000).step_by(5).any(|ms| lit(&render_at(ms)) == total));
+        assert!(Adeptum::new().logo.width > WIDTH);
+        assert!((0..8000).step_by(5).all(|ms| lit(&render_at(ms)) < total));
     }
 
     #[test]
