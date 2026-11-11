@@ -17,8 +17,10 @@ The first target device is the **Apex Pro TKL** with its OLED display.
 
 - Shows scenes on the OLED display: an Amiga Boing ball, Super Mario
   running and jumping over pipes and onto brick platforms in a level that
-  never repeats, and the Adeptum logo scrolling across the screen. "Off"
-  gives the screen back to the keyboard's own display.
+  never repeats, the Adeptum logo scrolling across the screen, and the CPU
+  load: the total as a number and a bar, with a matrix that has one cell
+  per active core, each filled by how busy that core is. "Off" gives the
+  screen back to the keyboard's own display.
 - Lights the keys from presets: a very faint warm yellow sheen, one solid
   colour, a slow breathing, all dark, or the keyboard's own scheme. The
   intensity, colour and breathing speed are adjustable.
@@ -67,7 +69,7 @@ busctl --user call org.keysteel.Daemon /org/keysteel/Daemon \
     org.keysteel.Daemon SetScene s boing
 ```
 
-The scene ids are `off`, `boing`, `mario` and `adeptum`.
+The scene ids are `off`, `boing`, `mario`, `adeptum` and `cpu`.
 
 The lighting arguments are the scheme (`warm`, `solid`, `breathing`, `off` or
 `default`), the intensity from 0 to 100, red, green and blue, and the

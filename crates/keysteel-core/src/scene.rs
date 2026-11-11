@@ -18,7 +18,7 @@
 // with Keysteel. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::frame::Frame;
-use crate::scenes::{adeptum::Adeptum, boing::Boing, mario::Mario, off::Off};
+use crate::scenes::{adeptum::Adeptum, boing::Boing, cpu::Cpu, mario::Mario, off::Off};
 use std::time::Duration;
 
 /// Something that can draw itself onto the OLED.
@@ -32,12 +32,19 @@ pub trait Scene: Send {
         true
     }
     /// Clears `frame` and draws the picture for `elapsed` since the scene
-    /// started. The result depends only on `elapsed`.
+    /// started. The result depends on `elapsed` and on any live data the
+    /// scene reads.
     fn render(&mut self, elapsed: Duration, frame: &mut Frame);
 }
 
 pub fn all_scenes() -> Vec<Box<dyn Scene>> {
-    vec![Box::new(Off), Box::new(Boing::new()), Box::new(Mario::new()), Box::new(Adeptum::new())]
+    vec![
+        Box::new(Off),
+        Box::new(Boing::new()),
+        Box::new(Mario::new()),
+        Box::new(Adeptum::new()),
+        Box::new(Cpu::new()),
+    ]
 }
 
 pub fn scene_by_id(id: &str) -> Option<Box<dyn Scene>> {
@@ -51,7 +58,7 @@ mod tests {
     #[test]
     fn all_scenes_ids_are_in_menu_order() {
         let ids: Vec<&str> = all_scenes().iter().map(|s| s.id()).collect();
-        assert_eq!(ids, vec!["off", "boing", "mario", "adeptum"]);
+        assert_eq!(ids, vec!["off", "boing", "mario", "adeptum", "cpu"]);
     }
 
     #[test]
@@ -67,12 +74,12 @@ mod tests {
     #[test]
     fn only_off_hands_the_display_back() {
         let flags: Vec<bool> = all_scenes().iter().map(|s| s.shows_picture()).collect();
-        assert_eq!(flags, vec![false, true, true, true]);
+        assert_eq!(flags, vec![false, true, true, true, true]);
     }
 
     #[test]
     fn only_off_is_not_animated() {
         let flags: Vec<bool> = all_scenes().iter().map(|s| s.animated()).collect();
-        assert_eq!(flags, vec![false, true, true, true]);
+        assert_eq!(flags, vec![false, true, true, true, true]);
     }
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- New display scene that shows the total CPU load and a matrix with one
+  cell per active core, filled by how busy the core is.
+
 ## 0.1.1
 
 - Fixed the key lighting stopping after a replug or after the keyboard
