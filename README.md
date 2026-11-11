@@ -49,7 +49,7 @@ Download the `.deb` from the
 it:
 
 ```
-sudo apt install ./keysteel_0.1.1-1_amd64.deb
+sudo apt install ./keysteel_0.1.2-1_amd64.deb
 ```
 
 Unplug the keyboard and plug it in again (or log out and in) so the new

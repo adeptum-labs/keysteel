@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
 
 - New display scene that shows the total CPU load and a matrix with one
   cell per active core, filled by how busy the core is.
+- The text in the Adeptum logo is larger, with evenly drawn letters.
 
 ## 0.1.1
 

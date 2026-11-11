@@ -1,3 +1,10 @@
+keysteel (0.1.2-1) unstable; urgency=low
+
+  * Add a display scene with the CPU load and a matrix of the cores.
+  * Make the text in the Adeptum logo larger.
+
+ -- Adam Waldenberg <adam@adeptum.se>  Wed, 11 Nov 2026 10:57:38 +0100
+
 keysteel (0.1.1-1) unstable; urgency=low
 
   * Fix the key lighting stopping after a replug or a refused report.
